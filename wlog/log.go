@@ -2,7 +2,7 @@ package wlog
 
 import (
 	"codeberg.org/eviedelta/dwhook"
-	"codeberg.org/eviedelta/openjishia/wlog/wlogger"
+	"github.com/eviedelta/openjishia/wlog/wlogger"
 )
 
 // Info is a standard logger for info

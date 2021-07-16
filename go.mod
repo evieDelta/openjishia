@@ -1,4 +1,4 @@
-module codeberg.org/eviedelta/openjishia
+module github.com/eviedelta/openjishia
 
 go 1.16
 

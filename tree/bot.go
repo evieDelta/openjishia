@@ -12,11 +12,11 @@ import (
 	"codeberg.org/eviedelta/drc"
 	"codeberg.org/eviedelta/drc/detc"
 	"codeberg.org/eviedelta/drc/subpresets"
-	"codeberg.org/eviedelta/openjishia/config"
-	"codeberg.org/eviedelta/openjishia/module"
-	"codeberg.org/eviedelta/openjishia/wlog"
 	"codeberg.org/eviedelta/trit"
 	"github.com/bwmarrin/discordgo"
+	"github.com/eviedelta/openjishia/config"
+	"github.com/eviedelta/openjishia/module"
+	"github.com/eviedelta/openjishia/wlog"
 )
 
 // Conf is the config

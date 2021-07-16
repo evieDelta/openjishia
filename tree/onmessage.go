@@ -4,8 +4,8 @@ import (
 	"log"
 	"strings"
 
-	"codeberg.org/eviedelta/openjishia/wlog"
 	"github.com/bwmarrin/discordgo"
+	"github.com/eviedelta/openjishia/wlog"
 )
 
 // the thing that does the on message stuff

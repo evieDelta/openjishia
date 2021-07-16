@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"codeberg.org/eviedelta/drc"
-	"codeberg.org/eviedelta/openjishia/module"
 	"github.com/bwmarrin/discordgo"
+	"github.com/eviedelta/openjishia/module"
 )
 
 // InitTime contains the exact time the bot was completely restarted

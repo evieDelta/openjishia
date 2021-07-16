@@ -1,9 +1,9 @@
 package root
 
 import (
-	"codeberg.org/eviedelta/openjishia/metacmd"
-	"codeberg.org/eviedelta/openjishia/module"
-	"codeberg.org/eviedelta/openjishia/tree"
+	"github.com/eviedelta/openjishia/metacmd"
+	"github.com/eviedelta/openjishia/module"
+	"github.com/eviedelta/openjishia/tree"
 )
 
 // see the root dir for the actual main package

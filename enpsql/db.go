@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"codeberg.org/eviedelta/drc"
-	"codeberg.org/eviedelta/openjishia/module"
 	"github.com/burntsushi/toml"
+	"github.com/eviedelta/openjishia/module"
 	"github.com/gocraft/dbr/v2"
 
 	// Import postgresql for database stuff

@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"codeberg.org/eviedelta/dwhook"
-	"codeberg.org/eviedelta/openjishia/config"
-	"codeberg.org/eviedelta/openjishia/wlog"
+	"github.com/eviedelta/openjishia/config"
+	"github.com/eviedelta/openjishia/wlog"
 )
 
 //
