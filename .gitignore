@@ -1,0 +1,34 @@
+# data folder which is the default location for configs and runtime stuff
+data/
+data/**
+emoteDump
+atopsecrettestmodule.go
+
+# default executable name
+emotetracker
+openjishia
+__debug_bin
+
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*~
+
+# certain files that might be made at runtime
+# some debug that were just left here, some tests, some not present in enko but not openjishia
+adam.json
+darchive*.json
+highlights.json
+idthingy.json
+rolfmod.json
+a
+colordump*.csv
+colorspam*
+gcmd/internal/imgpts/images/old/
+*.csv.gz
+pointlessstats.json
+giveaways.json

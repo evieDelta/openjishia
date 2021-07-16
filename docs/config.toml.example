@@ -1,0 +1,17 @@
+[Auth]
+Token="TOKEN HERE"
+
+[Bot]
+Debugm=false # This turns on and off some extra debug stuff
+Prefix=["!","?"]
+Admins=["YOUR USER ID HERE"] # this is for controlling who can run commands marked as bot admin only
+
+EnableDebugCommands=false # this enables or disables adding the "debug" commands, this just means that you can disable any debug commands in production
+
+[Logging]
+InfoPfp="" # this just sets the pfp used for 'info' log events, you can also set this in discord from the webhook settings
+ErrsPfp="" # this just sets the pfp used for 'error' log events, you can also set this in discord from the webhook settings
+NamePrefix="" # if set this just prefixes the log events username with the provided string
+	[Logging.Webhooks]
+	Info="" # the discord webhook to log info events to
+	Errs="" # the discord webhook to log debug events to

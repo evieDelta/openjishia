@@ -1,0 +1,44 @@
+{
+	// Place your openenko workspace snippets here. Each snippet is defined under a snippet name and has a scope, prefix, body and 
+	// description. Add comma separated ids of the languages where the snippet is applicable in the scope field. If scope 
+	// is left empty or omitted, the snippet gets applied to all languages. The prefix is what is 
+	// used to trigger the snippet and the body will be expanded and inserted. Possible variables are: 
+	// $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. 
+	// Placeholders with the same ids are connected.
+	// Example:
+	// "Print to console": {
+	// 	"scope": "javascript,typescript",
+	// 	"prefix": "log",
+	// 	"body": [
+	// 		"console.log('$1');",
+	// 		"$2"
+	// 	],
+	// 	"description": "Log output to console"
+	// }
+
+	"Mojishia Drc Command": {
+		"prefix": "mojishiacmd",
+		"body": [
+			"// ${1:name} ${2:help}",
+			"var c${1/(.*)/${1:/capitalize}/} = &drc.Command{",
+			"    Name: \"${1/(.*)/${1:/downcase}/}\",",
+			"    Manual: []string{\"${2}\"},",
+			"    CommandPerms: discordgo.PermissionSendMessages,",
+			"    Permissions: drc.Permissions{",
+			"        BotAdmin: ${4|trit.Unset,trit.True,trit.False|},",
+			"        Discord:  0,",
+			"    },",
+			"    Config: drc.CfgCommand{",
+			"        Listable: ${3|false,true|},",
+			"        MinimumArgs: ${5:0},",
+			"    },",
+			"    Exec: cf${1/(.*)/${1:/capitalize}/},",
+			"}",
+			"",
+			"func cf${1/(.*)/${1:/capitalize}/}(ctx *drc.Context) error {",
+			"    $0",
+			"}",
+		],
+		"description": "a snippet of a command for open legacy-enkomojishia"
+	},
+}
