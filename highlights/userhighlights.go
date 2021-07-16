@@ -406,7 +406,7 @@ func cfTest(ctx *drc.Context) error {
 	doots := make(map[string]bool, len(settings.Highlightwords))
 
 	for y, x := range settings.Highlightwords {
-		if start, end := checkHighlight(ctx.Ses, tem, y, x, ctx.Mes.Author.ID, ctx.Mes); start >= 0 && end >= 0 {
+		if start, end := checkHighlight(tem, y, x, ctx.Mes.Author.ID, ctx.Mes); start >= 0 && end >= 0 {
 			doots[y] = true
 		} else {
 			doots[y] = false

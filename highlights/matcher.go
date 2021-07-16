@@ -2,15 +2,11 @@ package highlights
 
 import (
 	"fmt"
-	"math"
-	"math/rand"
 	"runtime/debug"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 
-	"codeberg.org/eviedelta/dwhook"
 	"github.com/bwmarrin/discordgo"
 	"github.com/eviedelta/openjishia/wlog"
 	"github.com/pkg/errors"
@@ -95,166 +91,7 @@ func nextIndexAfter(l int, s string) int {
 	)
 }
 
-func checkHighlight(s *discordgo.Session, mst string, y string, x *highlight, user string, m *discordgo.MessageCreate) (start, end int) {
-	defer func() {
-		pan := recover()
-		if pan != nil {
-			start, end = -1, -1
-
-			ID := rand.Intn(math.MaxInt16)
-
-			stackDump := string(debug.Stack())
-
-			go func() {
-
-				includeMsg := false
-
-				if m.Author.Bot {
-					includeMsg = false
-				} else {
-
-					userch, err := s.UserChannelCreate(m.Author.ID)
-					if err == nil {
-						wmsg, err := s.ChannelMessageSendComplex(userch.ID, &discordgo.MessageSend{
-							Content: "An error has happened in our highlight system involving a message sent by you, are you okay with the message contents being sent to the developer to help debug the cause of this error?\nif you decline this request no of the message contents will be sent, if you accept we'll use the message contents to help debug the error and we will make sure to delete the stored message contents as soon as its no longer needed\n\nto make a choice either respond with `yes` or `y` for yes, and `no` or `n` for no. Or click on one of the reactions, ☑️ for yes, ❌ for no\u200B:",
-							Embed: &discordgo.MessageEmbed{
-								Author: &discordgo.MessageEmbedAuthor{
-									Name:    m.Author.String(),
-									IconURL: m.Author.AvatarURL("128x128"),
-								},
-								Description: m.Content,
-								Fields: []*discordgo.MessageEmbedField{{
-									Name:  "\u200B",
-									Value: fmt.Sprintf("[Jump to original message](https://discordapp.com/channels/%v/%v/%v)", m.GuildID, m.ChannelID, m.ID),
-								}},
-							},
-						})
-						if err != nil {
-							wlog.Err.Print(err)
-							includeMsg = false
-						} else {
-							err = s.MessageReactionAdd(wmsg.ChannelID, wmsg.ID, "☑️") // checkmark
-							if err != nil {
-								wlog.Err.Print(err)
-							}
-							err = s.MessageReactionAdd(wmsg.ChannelID, wmsg.ID, "❌") // X emote
-							if err != nil {
-								wlog.Err.Print(err)
-							}
-
-							wait := make(chan bool)
-							once := sync.Once{}
-							wfin := false
-
-							var msgremfn func()
-							var recremfm func()
-
-							msgremfn = s.AddHandler(func(s *discordgo.Session, nm *discordgo.MessageCreate) {
-								if nm.ChannelID != wmsg.ChannelID || nm.Author.ID != m.Author.ID {
-									return
-								}
-
-								once.Do(func() {
-									done := false
-									wfin = true
-
-									switch strings.ToLower(nm.Content) {
-									case "yes", "y", "true", "ok":
-										done = true
-									case "no", "n", "false":
-										done = false
-									default:
-										return
-									}
-
-									wait <- done
-								})
-							})
-							recremfm = s.AddHandler(func(s *discordgo.Session, nm *discordgo.MessageReactionAdd) {
-								if nm.ChannelID != wmsg.ChannelID || nm.MessageID != wmsg.ID || nm.UserID != m.Author.ID {
-									return
-								}
-
-								once.Do(func() {
-									done := false
-									wfin = true
-
-									switch nm.Emoji.APIName() {
-									case "☑️":
-										done = true
-									case "❌":
-										done = false
-									default:
-										return
-									}
-
-									wait <- done
-								})
-							})
-
-							var timeout = false
-
-							go func() {
-								for i := 0; i < 60; i++ {
-									if wfin {
-										return
-									}
-									time.Sleep(time.Minute * 30)
-								}
-								once.Do(func() {
-									if !wfin {
-										wait <- false
-									}
-									timeout = true
-								})
-							}()
-
-							includeMsg = <-wait
-
-							msgremfn()
-							recremfm()
-
-							if !includeMsg && timeout {
-								_, err = s.ChannelMessageSend(userch.ID, "Dialog Timed out, the message will not be sent\u200B:")
-							}
-							if !includeMsg {
-								_, err = s.ChannelMessageSend(userch.ID, "Thank you for confirming, the message will not be sent\u200B:")
-							}
-							if includeMsg {
-								_, err = s.ChannelMessageSend(userch.ID, "Thank you for confirming, the message will be sent to the developer, we will be sure to delete it as soon as its no longer needed\u200B:")
-							}
-							if err != nil {
-								wlog.Err.Print(err)
-							}
-						}
-					} else {
-						wlog.Err.Print(err)
-						includeMsg = false
-					}
-
-					wlog.Err.Printf("checkHl ID %04X, context: %v | %v | Msg? %v\n\n%v\n\n>>> ```\n%v\n```", ID, user, y, includeMsg, pan, stackDump)
-
-					if includeMsg {
-						wlog.Err.Webhook.Send(dwhook.Message{
-							Embeds: []dwhook.Embed{{
-								Author: dwhook.EmbedAuthor{
-									Name:    m.Author.String(),
-									IconURL: m.Author.AvatarURL("128x128"),
-								},
-								Title:       "Message that caused the panic",
-								Description: m.Content,
-								Timestamp:   string(m.Timestamp),
-								Footer: dwhook.EmbedFooter{
-									Text: fmt.Sprintf("%04X [Source Message](https://discordapp.com/channels/%v/%v/%v)", ID, m.GuildID, m.ChannelID, m.ID),
-								},
-							}},
-						})
-					}
-				}
-			}()
-		}
-	}()
-
+func checkHighlight(mst string, y string, x *highlight, user string, m *discordgo.MessageCreate) (start, end int) {
 	inc := 0
 	incTp := func() bool {
 		//	fmt.Println(m.ID, "| user", user, "| word", y, "| bumping area")
@@ -324,7 +161,7 @@ func doUserHighlight(s *discordgo.Session, m *discordgo.MessageCreate, user stri
 			continue
 		}
 
-		if start, end := checkHighlight(s, m.Content, y, x, user, m); start >= 0 && end >= 0 {
+		if start, end := checkHighlight(m.Content, y, x, user, m); start >= 0 && end >= 0 {
 			// fmt.Println(m.ID, "| user", user, "| word", y, "everything is clear, marking new cooldowns and moving to send alert")
 			addLimit(getrlimkey(user, m.GuildID, ""), delayAny)
 			addLimit(getrlimkey(user, m.GuildID, y), delaySpecific)
