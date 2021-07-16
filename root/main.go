@@ -1,6 +1,7 @@
 package root
 
 import (
+	"github.com/eviedelta/openjishia/highlights"
 	"github.com/eviedelta/openjishia/metacmd"
 	"github.com/eviedelta/openjishia/module"
 	"github.com/eviedelta/openjishia/tree"
@@ -18,6 +19,7 @@ const (
 var (
 	Modules = []*module.Module{
 		metacmd.Module,
+		highlights.Module,
 	}
 )
 

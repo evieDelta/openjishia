@@ -10,4 +10,6 @@ require (
 	github.com/bwmarrin/discordgo v0.22.0
 	github.com/gocraft/dbr/v2 v2.7.2
 	github.com/lib/pq v1.10.2
+	github.com/pkg/errors v0.9.1 // indirect
+	golang.org/x/time v0.0.0-20210611083556-38a9dc6acbc6
 )
