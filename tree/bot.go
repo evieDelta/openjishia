@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 	"time"
@@ -132,8 +131,6 @@ func Setup(modules []*module.Module) {
 
 		// Add all commands
 		Hn.Commands.AddBulk(m.Commands)
-
-		// Add admin commands
 		adminCommands.Subcommands.AddBulk(m.AdminCommands)
 
 		// Add debug commands only if debug commands are enabled
@@ -157,14 +154,7 @@ func Setup(modules []*module.Module) {
 		log.Fatalln("Error initialising handler", err)
 	}
 
-	gcmd := exec.Command("git", "rev-list", "HEAD", "--max-count=1")
-	gcmd.Dir = os.Getenv("MOJITREE_DIRECTORY")
-	dat, err := gcmd.CombinedOutput()
-	if err != nil {
-		wlog.Err.Print(err, "\n\n", string(dat))
-	}
-
-	err = wlog.Info.Printf("Setup bot with modules:```\v%v```\nRunning DRC: %v\nBot Software: %v v%v (%v)", modlist, drc.Version, BotSoftware, BotVersion, string(dat[:8]))
+	err = wlog.Info.Printf("Setup bot with modules:```\v%v```\nRunning DRC: %v\nBot Software: %v v%v", modlist, drc.Version, BotSoftware, BotVersion)
 
 	if err != nil {
 		err2 := wlog.Err.Print("Error sending init log", err)
