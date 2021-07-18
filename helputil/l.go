@@ -1,7 +1,7 @@
-/*Package htopic .
+/*Package helputil .
 
   A utility for putting help pages in md files and importing them via go embed
-  
+
   to use add a directory called `topic` and go embed it via
   ```
   //go:embed topics/*
@@ -15,7 +15,7 @@
   this does not include an implementation of how to get or identify the right file
   implementations of a help command will need to figure that out themselves
 */
-package htopic
+package helputil
 
 import (
 	"fmt"
