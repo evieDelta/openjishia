@@ -32,3 +32,4 @@ gcmd/internal/imgpts/images/old/
 *.csv.gz
 pointlessstats.json
 giveaways.json
+.vscode/launch.json
