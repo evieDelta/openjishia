@@ -4,7 +4,6 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"os"
 	"os/exec"
 	"path"
 	"strconv"
@@ -12,7 +11,6 @@ import (
 	"sync"
 	"unicode"
 
-	"codeberg.org/eviedelta/drc/detc"
 	"github.com/eviedelta/openjishia/internal/stopwatch"
 	"github.com/eviedelta/openjishia/wlog"
 	"github.com/gocraft/dbr/v2"
@@ -120,13 +118,9 @@ func doBackup() (do bool) {
 	}
 	do = true
 
-	// process the args at least vaguely, won't support shell syntax but at least it'll do something
-	text := os.ExpandEnv(Config.External.BackupCommand)
-	args := detc.ArgSplitter(text)
-
 	// do command
 	backupOnce.Do(func() {
-		c := exec.Command(args[0], args[1:]...)
+		c := exec.Command("sh", "-c", Config.External.BackupCommand)
 		o, err := c.CombinedOutput()
 		if err != nil {
 			do = false // don't

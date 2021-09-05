@@ -1,4 +1,12 @@
-Database="" # Database name
-Username="" # Username to connect via
-Password="" # Password
-Hostname="" # Hostname
+[Auth]
+	Database="" # Database name
+	Username="" # Username to connect via
+	Password="" # Password
+	Hostname="" # Hostname
+
+[External]
+	  # A command to call for backing up the database before doing a schema update
+	  # it passes what is written below *as is* to sh
+	  # (runs as if you prepended the contents of BackupCommand with `sh -c ` in a terminal)
+	  # most likely won't work on windows, as it dumps it through sh which is a *nix thing
+	BackupCommand=""
