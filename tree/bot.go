@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -115,10 +116,11 @@ func Setup(modules []*module.Module) {
 	for _, m := range modules {
 		modlist += m.Name + "\n"
 		if m.Config != nil {
-			if err := config.AnyConf(ConfigDir, m.Name+".toml", m.Config); err != nil && os.IsNotExist(err) {
-				panic(err)
-			} else if err == nil {
+			err := config.AnyConf(ConfigDir, m.Name+".toml", m.Config)
+			if err == nil {
 				m.ConfigFound = true
+			} else if !errors.Is(err, os.ErrNotExist) {
+				panic(err)
 			}
 		}
 

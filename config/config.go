@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/burntsushi/toml"
 )
@@ -45,9 +47,12 @@ type Logging struct {
 func AConf(loc string) (Config, error) {
 	var search []string
 	if loc == "" {
-		search = []string{"./config.toml", "./data/config.toml"}
+		search = []string{
+			"./config.toml", "./data/config.toml", "./config/config.toml"}
 	} else {
-		search = []string{loc, "./config.toml", "./data/config.toml"}
+		search = []string{
+			filepath.Join(loc, "config.toml"),
+			"./config.toml", "./data/config.toml", "./config/config.toml"}
 	}
 
 	for _, f := range search {
@@ -92,9 +97,12 @@ func CheckDirExist(loc string) bool {
 func AnyConf(loc, filename string, cfg interface{}) error {
 	var search []string
 	if loc == "" {
-		search = []string{"./", "./data/"}
+		search = []string{"./", "./data/", "./config/"}
 	} else {
-		search = []string{loc, "./", "./data/"}
+		if !strings.HasSuffix(loc, "/") {
+			loc += "/"
+		}
+		search = []string{loc, "./", "./data/", "./conifg/"}
 	}
 
 	for _, f := range search {
@@ -104,5 +112,5 @@ func AnyConf(loc, filename string, cfg interface{}) error {
 		_, err := toml.DecodeFile(f+filename, cfg)
 		return err
 	}
-	return fmt.Errorf("Filename not found, locations checked: %v", search)
+	return fmt.Errorf("%w, locations checked for `%v`: %v", os.ErrNotExist, filename, search)
 }

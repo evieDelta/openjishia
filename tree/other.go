@@ -31,7 +31,7 @@ func InitHandleFlags() {
 	)
 
 	// set the config file location (it has some defaults to check so you don't need to specify with the flag if its in ./config.toml or ./data/config.toml)
-	flag.StringVar(&flagConfig, "config", "", "the config file to use for the main config")
+	flag.StringVar(&flagConfig, "config", "", "the directory to look in for config files")
 	flag.StringVar(&flagDataDir, "data", "", "the location to look for data in")
 	flag.Parse()
 
