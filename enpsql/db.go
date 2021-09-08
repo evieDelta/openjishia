@@ -23,7 +23,9 @@ import (
 
 	"codeberg.org/eviedelta/drc"
 	"github.com/burntsushi/toml"
+	"github.com/bwmarrin/discordgo"
 	"github.com/eviedelta/openjishia/module"
+	"github.com/eviedelta/openjishia/wlog"
 	"github.com/gocraft/dbr/v2"
 	"github.com/pkg/errors"
 
@@ -97,12 +99,19 @@ var Module = &module.Module{
 		return nil
 	},
 
-	OpenFunc:  OpenFunc,
-	CloseFunc: CloseFunc,
+	OpenFunc:  openFunc,
+	CloseFunc: closeFunc,
+}
+
+func onReady(s *discordgo.Session, e *discordgo.Ready) {
+	err := dbc.Ping()
+	if err != nil {
+		wlog.Err.Print(err)
+	}
 }
 
 // OpenFunc contains some the initialisation functions for this module per the terms of the pre-alpha attempt at modularisation this is built off of
-func OpenFunc(mod *module.Module) error {
+func openFunc(mod *module.Module) error {
 	dsn := fmt.Sprintf("dbname=%v user=%v password='%v' host='%v' sslmode=disable",
 		Config.Auth.Database, Config.Auth.Username, Config.Auth.Password, Config.Auth.Hostname)
 	conn, err := dbr.Open("postgres", dsn, nil)
@@ -130,6 +139,6 @@ func OpenFunc(mod *module.Module) error {
 }
 
 // CloseFunc contains the closing functions for this module per the terms of the pre-alpha attempt at modularisation this is built off of
-func CloseFunc(mod *module.Module) {
+func closeFunc(mod *module.Module) {
 	log.Println(dbc.Close())
 }
