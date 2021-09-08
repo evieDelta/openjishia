@@ -82,7 +82,7 @@ func Setup(modules []*module.Module) {
 
 	// Initialise debug and admin commands
 	adminCommands = Hn.Commands.Add(&drc.Command{
-		Name: "ADMIN",
+		Name: "admin",
 		Permissions: drc.Permissions{
 			BotAdmin: trit.True,
 		},
@@ -92,7 +92,7 @@ func Setup(modules []*module.Module) {
 		},
 	})
 	debugCommands = Hn.Commands.Add(&drc.Command{
-		Name: "DEBUG",
+		Name: "debug",
 		Permissions: drc.Permissions{
 			BotAdmin: trit.True,
 		},
@@ -104,6 +104,8 @@ func Setup(modules []*module.Module) {
 	if Conf.Bot.DebugCommands {
 		Hn.Commands.Add(debugCommands)
 	}
+
+	//	fmt.Println("debug commands", Conf.Bot.DebugCommands)
 
 	// add the core handlers (guild create mostly just exists for debug at this point)
 	Dg.AddHandler(onMessage)

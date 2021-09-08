@@ -5,6 +5,7 @@ import (
 	"github.com/eviedelta/openjishia/highlights"
 	"github.com/eviedelta/openjishia/metacmd"
 	"github.com/eviedelta/openjishia/module"
+	"github.com/eviedelta/openjishia/nschedule"
 	"github.com/eviedelta/openjishia/tree"
 )
 
@@ -20,6 +21,7 @@ const (
 var (
 	Modules = []*module.Module{
 		enpsql.Module,
+		nschedule.Module,
 		metacmd.Module,
 		highlights.Module,
 	}
