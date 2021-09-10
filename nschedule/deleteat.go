@@ -22,8 +22,9 @@ type MetaMsgDelete struct {
 
 var _msgDeleter = &msgDeleter{
 	Conf: insched.HandlerConfig{
-		Precise:    false,
-		ScanPeriod: time.Hour / 2, // we don't expect much yet so we scan every half hour
+		Precise:      false,
+		ScanPeriod:   time.Hour / 2, // we don't expect much yet so we scan every half hour
+		DeferOnPanic: -1,
 	},
 }
 

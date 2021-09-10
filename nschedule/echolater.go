@@ -23,8 +23,9 @@ type SendLaterMeta struct {
 
 var _sendLater = &sendLater{
 	Conf: insched.HandlerConfig{
-		Precise:    false,
-		ScanPeriod: time.Minute * 5,
+		Precise:      false,
+		ScanPeriod:   time.Minute * 5,
+		DeferOnPanic: -1,
 	},
 }
 
@@ -39,6 +40,8 @@ func (sl *sendLater) Call(e insched.Entry) (Defer time.Duration, err error) {
 	if err != nil {
 		return 0, err
 	}
+
+	// panic("beenz")
 
 	fmt.Println(meta.Channel)
 	fmt.Println(meta.Contents)
