@@ -209,9 +209,9 @@ func (a *_action) doEntry(x Entry, wentWrong chan _failure, wg *sync.WaitGroup) 
 		// build the error
 		var err error
 		if e, ok := er.(error); ok {
-			errors.Wrap(e, append)
+			err = errors.Wrap(e, append)
 		} else {
-			err = errors.New(append + ": " + fmt.Sprint(err))
+			err = errors.New(append + ": " + fmt.Sprint(er))
 		}
 
 		// and send it
