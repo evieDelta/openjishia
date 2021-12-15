@@ -21,14 +21,6 @@ func getrlimkey(userid, guildid, tag string) string {
 	return guildid + ":" + userid + ":" + tag
 }
 
-func doRate(key string, dur time.Duration) bool {
-	cleanratelimit()
-
-	st := isLimited(key)
-	addLimit(key, dur)
-	return st
-}
-
 func addLimit(key string, dur time.Duration) {
 	//	fmt.Println("adding ratelimit key ", key, " for ", dur.String())
 

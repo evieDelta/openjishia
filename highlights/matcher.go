@@ -12,15 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-func in(s string, l []string) bool {
-	for _, x := range l {
-		if x == s {
-			return true
-		}
-	}
-	return false
-}
-
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	defer func() {
 		err := recover()
@@ -36,16 +27,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
-	globallock.RLock()
-	defer globallock.RUnlock()
+	if m.GuildID == "" {
+		return
+	}
 
-	if globalruntime.Guildsettings[m.GuildID] == nil {
-		return
-	}
-	if !globalruntime.Guildsettings[m.GuildID].Enable {
-		return
-	}
-	if len(m.Content) <= 1 {
+	if !isguildenabled(m.GuildID) {
 		return
 	}
 
@@ -53,31 +39,36 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 
 	//	fmt.Println("processing message: ", m.ID)
 
-	for u, d := range globalruntime.Guildsettings[m.GuildID].MemberSettings {
-		//		fmt.Println(m.ID, " | checking highlights for user ", u)
-		if isLimited(getrlimkey(u, m.GuildID, "")) || d.Disabled {
-			//			fmt.Println(m.ID, " | user ", u, " is currently on cooldown")
+	for _, hls := range guildHighlightsForHighlighter(m.GuildID) {
+		fmt.Println(m.ID, " | checking highlights for user ", hls.UserID)
+		if isLimited(getrlimkey(hls.UserID, m.GuildID, "")) || !hls.Enabled {
+			fmt.Println(m.ID, " | user ", hls.UserID, " is currently on cooldown")
 			continue
 		}
-		if p, err := s.State.UserChannelPermissions(u, m.ChannelID); err != nil {
-			globalruntime.Guildsettings[m.GuildID].MemberSettings[u].Disabled = true
-			wlog.Err.Print(errors.Wrapf(err, "@s.State.UserChannelPermissions (Check Permission for user %v)", u))
+		if p, err := s.State.UserChannelPermissions(hls.UserID, m.ChannelID); err != nil {
+			toggleForUser(hls.UserID, m.GuildID, false)
+			wlog.Err.Print(errors.Wrapf(err, "@s.State.UserChannelPermissions (Check Permission for user %v)", hls.UserID))
 
 			continue
 		} else if p&discordgo.PermissionViewChannel == 0 {
-			//			fmt.Println(m.ID, " | user ", u, " does not have permissions to view channel")
-			continue
-		}
-		if d.Blocks[m.Author.ID].State || d.Blocks[m.ChannelID].State {
-			//			fmt.Println(m.ID, " | user ", u, " highlight blocked by user block config")
+			fmt.Println(m.ID, " | user ", hls.UserID, " does not have permissions to view channel")
 			continue
 		}
 
-		//		fmt.Println(m.ID, " | user ", u, " going forward with highlight checking")
+		isBlocked := false
+		for _, id := range hls.Blocks {
+			if id == m.Author.ID || id == m.ChannelID {
+				isBlocked = true
+				break
+			}
+		}
+		if isBlocked {
+			fmt.Println(m.ID, " | user ", hls.UserID, " blocked this message")
+		}
 
-		err := doUserHighlight(s, m, u, d)
+		err := doUserHighlight(s, m, hls.UserID, hls.Highlights)
 		if err != nil {
-			wlog.Err.Print(errors.Wrapf(err, "@doUserHighlight (For user %v)", u))
+			wlog.Err.Print(errors.Wrapf(err, "@doUserHighlight (For user %v)", hls.UserID))
 		}
 	}
 	return nil
@@ -91,7 +82,7 @@ func nextIndexAfter(l int, s string) int {
 	)
 }
 
-func checkHighlight(mst string, y string, x *highlight, user string, m *discordgo.MessageCreate) (start, end int) {
+func checkHighlight(mst string, y string, user string, m *discordgo.MessageCreate) (start, end int) {
 	inc := 0
 	incTp := func() bool {
 		//	fmt.Println(m.ID, "| user", user, "| word", y, "| bumping area")
@@ -148,25 +139,25 @@ func checkHighlight(mst string, y string, x *highlight, user string, m *discordg
 	return -1, -1
 }
 
-func doUserHighlight(s *discordgo.Session, m *discordgo.MessageCreate, user string, settings *membersettings) (err error) {
-	if settings == nil || len(settings.Highlightwords) < 1 {
+func doUserHighlight(s *discordgo.Session, m *discordgo.MessageCreate, user string, highlights []string) (err error) {
+	if len(highlights) < 1 {
 		// fmt.Println(m.ID, "| user", user, "| user has no settings or no highlights")
 		return
 	}
 
-	for y, x := range settings.Highlightwords {
+	for _, word := range highlights {
 		// fmt.Println(m.ID, "| user", user, "| proccessing word", y)
-		if isLimited(getrlimkey(user, m.GuildID, y)) {
+		if isLimited(getrlimkey(user, m.GuildID, word)) {
 			// fmt.Println(m.ID, "| user", user, "| word", y, "is currently on cooldown")
 			continue
 		}
 
-		if start, end := checkHighlight(m.Content, y, x, user, m); start >= 0 && end >= 0 {
+		if start, end := checkHighlight(m.Content, word, user, m); start >= 0 && end >= 0 {
 			// fmt.Println(m.ID, "| user", user, "| word", y, "everything is clear, marking new cooldowns and moving to send alert")
 			addLimit(getrlimkey(user, m.GuildID, ""), delayAny)
-			addLimit(getrlimkey(user, m.GuildID, y), delaySpecific)
+			addLimit(getrlimkey(user, m.GuildID, word), delaySpecific)
 
-			err = sendHighlight(s, m, user, m.Content[start:end], y)
+			err = sendHighlight(s, m, user, m.Content[start:end], word)
 			return errors.Wrap(err, "@sendHighlight")
 		}
 	}
@@ -246,7 +237,7 @@ func sendHighlight(s *discordgo.Session, m *discordgo.MessageCreate, targetuser,
 	}
 
 	// user nolock because its already locked
-	addDeletionQueueNoLock(msg.ID, msg.ChannelID, messageKeepTime)
+	addDeletionQueue(msg.ID, msg.ChannelID, messageKeepTime)
 
 	return err
 }

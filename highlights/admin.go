@@ -41,8 +41,6 @@ func init() {
 	hladmin.Subcommands.Add(forcerateclear)
 
 	hladmin.Subcommands.Add(dellogtest)
-	hladmin.Subcommands.Add(delstatus)
-	hladmin.Subcommands.Add(delnow)
 
 	hladmin.Subcommands.Add(debugView)
 	hladmin.Subcommands.Add(debugRemove)
@@ -65,19 +63,19 @@ var ratelimitstatus = &drc.Command{
 }
 
 func cfRatelimitstatus(ctx *drc.Context) error {
-	globallock.RLock()
-	defer globallock.RUnlock()
+	hlratelimitlock.RLock()
+	defer hlratelimitlock.RUnlock()
 
 	ls := "> Active\n"
 	for i, x := range hlratelimit {
 		if isLimited(i) {
-			ls += i + " | " + x.Sub(time.Now()).Truncate(time.Millisecond).String() + "\n"
+			ls += i + " | " + time.Until(x).Truncate(time.Millisecond).String() + "\n"
 		}
 	}
 	ls += "> Inactive\n"
 	for i, x := range hlratelimit {
 		if !isLimited(i) {
-			ls += i + " | " + x.Sub(time.Now()).Truncate(time.Millisecond).String() + "\n"
+			ls += i + " | " + time.Until(x).Truncate(time.Millisecond).String() + "\n"
 		}
 	}
 

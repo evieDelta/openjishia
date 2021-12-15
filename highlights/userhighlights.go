@@ -192,7 +192,6 @@ func cfBlock(ctx *drc.Context) error {
 	}
 	arg := ""
 	res := ""
-	typ := 0
 	if ctx.BoolFlags["user"] {
 		m, _, err := ctx.Args[0].Member(ctx)
 		if err != nil {
@@ -200,7 +199,6 @@ func cfBlock(ctx *drc.Context) error {
 		}
 		arg = m.User.ID
 		res = m.User.String()
-		typ = blockTypeUser
 	} else if ctx.BoolFlags["channel"] {
 		c, _, err := ctx.Args[0].Channel(ctx)
 		if err != nil {
@@ -208,25 +206,22 @@ func cfBlock(ctx *drc.Context) error {
 		}
 		arg = c.ID
 		res = c.Name
-		typ = blockTypeChannel
 	} else {
 		m, _, err := ctx.Args[0].Member(ctx)
 		if err == nil {
 			arg = m.User.ID
 			res = m.User.String()
-			typ = blockTypeUser
 		} else {
 			c, _, err := ctx.Args[0].Channel(ctx)
 			if err == nil {
 				arg = c.ID
 				res = c.Name
-				typ = blockTypeChannel
 			} else {
 				return drc.NewFailure(nil, "404 Not found", "Could not find channel or member")
 			}
 		}
 	}
-	useraddhlblock(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg, typ)
+	useraddhlblock(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg)
 	_, err := ctx.Ses.ChannelMessageSendEmbed(ctx.Mes.ChannelID, &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
 			Name:    ctx.Mes.Author.Username + "'s Highlights",
@@ -334,15 +329,27 @@ func cfBlocking(ctx *drc.Context) error {
 	blls := userlshlblock(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	usls := ""
 	chls := ""
-	for y, x := range blls {
-		if x.Thing == blockTypeUser {
-			usls += "<@!" + y + ">\n"
+
+	guildChannels, err := ctx.Ses.GuildChannels(ctx.Mes.GuildID)
+	if err != nil {
+		return err
+	}
+	for _, id := range blls {
+		isChannel := false
+		for _, ch := range guildChannels {
+			if id == ch.ID {
+				isChannel = true
+				break
+			}
+		}
+		if isChannel {
+			chls += "<#" + id + ">\n"
 		} else {
-			chls += "<#" + y + ">\n"
+			usls += "<@!" + id + ">\n"
 		}
 	}
 
-	_, err := ctx.Ses.ChannelMessageSendEmbed(ctx.Mes.ChannelID, &discordgo.MessageEmbed{
+	_, err = ctx.Ses.ChannelMessageSendEmbed(ctx.Mes.ChannelID, &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
 			Name:    ctx.Mes.Author.Username + "'s Blocking",
 			IconURL: ctx.Mes.Author.AvatarURL("128"),
@@ -385,31 +392,24 @@ var truefalseemote = map[bool]string{
 }
 
 func cfTest(ctx *drc.Context) error {
-	globallock.RLock()
-	defer globallock.RUnlock()
-
-	if globalruntime.Guildsettings[ctx.Mes.GuildID] == nil {
-		return ctx.Reply("Guild setting error")
-	}
-	if !globalruntime.Guildsettings[ctx.Mes.GuildID].Enable {
+	if !isguildenabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
 	}
 
 	tem := strings.Join(ctx.RawArgs, " ")
 
-	settings := globalruntime.Guildsettings[ctx.Mes.GuildID].MemberSettings[ctx.Mes.Author.ID]
-
-	if settings == nil || len(settings.Highlightwords) < 1 {
+	highlights := userlshl(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+	if len(highlights) == 0 {
 		return ctx.Reply("You don't seem to have any highlights")
 	}
 
-	doots := make(map[string]bool, len(settings.Highlightwords))
+	doots := make(map[string]bool, len(highlights))
 
-	for y, x := range settings.Highlightwords {
-		if start, end := checkHighlight(tem, y, x, ctx.Mes.Author.ID, ctx.Mes); start >= 0 && end >= 0 {
-			doots[y] = true
+	for _, word := range highlights {
+		if start, end := checkHighlight(tem, word, ctx.Mes.Author.ID, ctx.Mes); start >= 0 && end >= 0 {
+			doots[word] = true
 		} else {
-			doots[y] = false
+			doots[word] = false
 		}
 	}
 
