@@ -40,9 +40,9 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 	//	fmt.Println("processing message: ", m.ID)
 
 	for _, hls := range guildHighlightsForHighlighter(m.GuildID) {
-		fmt.Println(m.ID, " | checking highlights for user ", hls.UserID)
+		//fmt.Println(m.ID, " | checking highlights for user ", hls.UserID)
 		if isLimited(getrlimkey(hls.UserID, m.GuildID, "")) || !hls.Enabled {
-			fmt.Println(m.ID, " | user ", hls.UserID, " is currently on cooldown")
+			//fmt.Println(m.ID, " | user ", hls.UserID, " is currently on cooldown")
 			continue
 		}
 		if p, err := s.State.UserChannelPermissions(hls.UserID, m.ChannelID); err != nil {
@@ -51,7 +51,7 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 
 			continue
 		} else if p&discordgo.PermissionViewChannel == 0 {
-			fmt.Println(m.ID, " | user ", hls.UserID, " does not have permissions to view channel")
+			//fmt.Println(m.ID, " | user ", hls.UserID, " does not have permissions to view channel")
 			continue
 		}
 
@@ -63,7 +63,8 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 			}
 		}
 		if isBlocked {
-			fmt.Println(m.ID, " | user ", hls.UserID, " blocked this message")
+			//fmt.Println(m.ID, " | user ", hls.UserID, " blocked this message")
+			continue
 		}
 
 		err := doUserHighlight(s, m, hls.UserID, hls.Highlights)
