@@ -13,6 +13,10 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+func NormaliseString(s string) string {
+	return strings.ToLower(norm.NFKC.String(s))
+}
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	defer func() {
 		err := recover()
@@ -40,7 +44,7 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 
 	//	fmt.Println("processing message: ", m.ID)
 
-	content := strings.ToLower(norm.NFKC.String(m.Content))
+	content := NormaliseString(m.Content)
 
 mainloop:
 	for _, hls := range guildHighlightsForHighlighter(m.GuildID) {

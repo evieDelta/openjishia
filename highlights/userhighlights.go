@@ -10,7 +10,6 @@ import (
 	"codeberg.org/eviedelta/drc"
 	"codeberg.org/eviedelta/trit"
 	"github.com/bwmarrin/discordgo"
-	"golang.org/x/text/unicode/norm"
 )
 
 // cmdhighlight some commands for highlighting words and stuff
@@ -84,8 +83,8 @@ func cfAdd(ctx *drc.Context) error {
 		return ctx.Reply(notEnabledMessage)
 	}
 
-	tem := strings.ToLower(strings.Join(ctx.RawArgs, " "))
-	tem = norm.NFKC.String(tem)
+	tem := strings.Join(ctx.RawArgs, " ")
+	tem = NormaliseString(tem)
 
 	list, err := userlshl(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
@@ -613,7 +612,7 @@ func cfTest(ctx *drc.Context) error {
 	doots := make(map[string]bool, len(highlights))
 
 	for _, word := range highlights {
-		if start, end := checkHighlight(strings.ToLower(norm.NFKC.String(tem)), word, ctx.Mes.Author.ID, ctx.Mes); start >= 0 && end >= 0 {
+		if start, end := checkHighlight(NormaliseString(tem), word, ctx.Mes.Author.ID, ctx.Mes); start >= 0 && end >= 0 {
 			doots[word] = true
 		} else {
 			doots[word] = false
