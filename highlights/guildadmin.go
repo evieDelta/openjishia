@@ -57,7 +57,10 @@ var hlconfEnable = &drc.Command{
 }
 
 func cfEnable(ctx *drc.Context) error {
-	setguildenable(ctx.Mes.GuildID, true)
+	err := setguildenable(ctx.Mes.GuildID, true)
+	if err != nil {
+		return err
+	}
 	return ctx.Reply("Highlights are now on")
 }
 
@@ -78,7 +81,10 @@ var hlconfDisable = &drc.Command{
 }
 
 func cfDisable(ctx *drc.Context) error {
-	setguildenable(ctx.Mes.GuildID, false)
+	err := setguildenable(ctx.Mes.GuildID, false)
+	if err != nil {
+		return err
+	}
 	return ctx.Reply("Highlights are now off")
 }
 
@@ -136,7 +142,10 @@ func cfView(ctx *drc.Context) error {
 	}
 
 	var ls string
-	list := userlshl(user.User.ID, ctx.Mes.GuildID)
+	list, err := userlshl(user.User.ID, ctx.Mes.GuildID)
+	if err != nil {
+		return err
+	}
 	for _, x := range list {
 		ls += x + "\n"
 	}
@@ -175,7 +184,10 @@ func cfModRemove(ctx *drc.Context) error {
 	}
 
 	tem := strings.Join(ctx.RawArgs[1:], " ")
-	userremhl(user.User.ID, ctx.Mes.GuildID, tem)
+	err = userremhl(user.User.ID, ctx.Mes.GuildID, tem)
+	if err != nil {
+		return err
+	}
 
 	_, err = ctx.Ses.ChannelMessageSendEmbed(ctx.Mes.ChannelID, &discordgo.MessageEmbed{
 		//		Author: &discordgo.MessageEmbedAuthor{

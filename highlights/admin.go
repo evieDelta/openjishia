@@ -164,7 +164,10 @@ func cfDebugView(ctx *drc.Context) error {
 	}
 
 	var ls string
-	list := userlshl(ctx.RawArgs[1], ctx.RawArgs[0])
+	list, err := userlshl(ctx.RawArgs[1], ctx.RawArgs[0])
+	if err != nil {
+		return err
+	}
 	for _, x := range list {
 		ls += x + "\n"
 	}

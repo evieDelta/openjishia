@@ -31,14 +31,15 @@ func toggleForUser(userID, guildID string, toggleTo bool) {
 }
 
 type Highlight struct {
-	UserID     string
-	Enabled    bool
-	Highlights []string
-	Blocks     []string
+	UserID        string
+	Enabled       bool
+	Highlights    []string
+	ChannelBlocks []string
+	UserBlocks    []string
 }
 
 func guildHighlightsForHighlighter(guildID string) (hls []Highlight) {
-	rows, err := db.s.Query("select user_id, enabled, words, blocks from highlights.highlights where guild_id = $1", guildID)
+	rows, err := db.s.Query("select user_id, enabled, words, channel_blocks, user_blocks from highlights.highlights where guild_id = $1", guildID)
 	if err != nil {
 		wlog.Err.Printf("Getting highlights for g:%v: %v", guildID, err)
 
@@ -48,7 +49,7 @@ func guildHighlightsForHighlighter(guildID string) (hls []Highlight) {
 
 	for rows.Next() {
 		var hl Highlight
-		if err := rows.Scan(&hl.UserID, &hl.Enabled, pq.Array(&hl.Highlights), pq.Array(&hl.Blocks)); err != nil {
+		if err := rows.Scan(&hl.UserID, &hl.Enabled, pq.Array(&hl.Highlights), pq.Array(&hl.ChannelBlocks), pq.Array(&hl.UserBlocks)); err != nil {
 			wlog.Err.Printf("Getting highlights for g:%v: %v", guildID, err)
 		}
 		hls = append(hls, hl)

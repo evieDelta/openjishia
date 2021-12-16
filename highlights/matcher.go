@@ -10,6 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/eviedelta/openjishia/wlog"
 	"github.com/pkg/errors"
+	"golang.org/x/text/unicode/norm"
 )
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -27,7 +28,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
-	if m.GuildID == "" {
+	if m.GuildID == "" || m.Author.Bot { // maybe we can unblock bots if we find a good solution to pk
 		return
 	}
 
@@ -35,13 +36,16 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 		return
 	}
 
-	addLimit(getrlimkey(m.Author.ID, m.GuildID, ""), delaySelf)
+	addLimit(getrlimkey(m.Author.ID, m.ChannelID, ""), delaySelf)
 
 	//	fmt.Println("processing message: ", m.ID)
 
+	content := strings.ToLower(norm.NFKC.String(m.Content))
+
+mainloop:
 	for _, hls := range guildHighlightsForHighlighter(m.GuildID) {
 		//fmt.Println(m.ID, " | checking highlights for user ", hls.UserID)
-		if isLimited(getrlimkey(hls.UserID, m.GuildID, "")) || !hls.Enabled {
+		if isLimited(getrlimkey(hls.UserID, m.ChannelID, "")) || !hls.Enabled {
 			//fmt.Println(m.ID, " | user ", hls.UserID, " is currently on cooldown")
 			continue
 		}
@@ -55,19 +59,20 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 			continue
 		}
 
-		isBlocked := false
-		for _, id := range hls.Blocks {
-			if id == m.Author.ID || id == m.ChannelID {
-				isBlocked = true
-				break
+		for _, id := range hls.ChannelBlocks {
+			if id == m.ChannelID {
+				//fmt.Println(m.ID, " | user ", hls.UserID, " channel blocked this message")
+				continue mainloop
 			}
 		}
-		if isBlocked {
-			//fmt.Println(m.ID, " | user ", hls.UserID, " blocked this message")
-			continue
+		for _, id := range hls.UserBlocks {
+			if id == m.Author.ID {
+				//fmt.Println(m.ID, " | user ", hls.UserID, " channel blocked this message")
+				continue mainloop
+			}
 		}
 
-		err := doUserHighlight(s, m, hls.UserID, hls.Highlights)
+		err := doUserHighlight(s, m, content, hls.UserID, hls.Highlights)
 		if err != nil {
 			wlog.Err.Print(errors.Wrapf(err, "@doUserHighlight (For user %v)", hls.UserID))
 		}
@@ -78,9 +83,7 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 func indexCheck(r rune) bool { return unicode.IsSpace(r) || unicode.IsPunct(r) }
 
 func nextIndexAfter(l int, s string) int {
-	return strings.IndexFunc(s[l:],
-		func(r rune) bool { return unicode.IsSpace(r) || unicode.IsPunct(r) },
-	)
+	return strings.IndexFunc(s[l:], indexCheck)
 }
 
 func checkHighlight(mst string, y string, user string, m *discordgo.MessageCreate) (start, end int) {
@@ -140,7 +143,7 @@ func checkHighlight(mst string, y string, user string, m *discordgo.MessageCreat
 	return -1, -1
 }
 
-func doUserHighlight(s *discordgo.Session, m *discordgo.MessageCreate, user string, highlights []string) (err error) {
+func doUserHighlight(s *discordgo.Session, m *discordgo.MessageCreate, message, user string, highlights []string) (err error) {
 	if len(highlights) < 1 {
 		// fmt.Println(m.ID, "| user", user, "| user has no settings or no highlights")
 		return
@@ -148,15 +151,15 @@ func doUserHighlight(s *discordgo.Session, m *discordgo.MessageCreate, user stri
 
 	for _, word := range highlights {
 		// fmt.Println(m.ID, "| user", user, "| proccessing word", y)
-		if isLimited(getrlimkey(user, m.GuildID, word)) {
+		if isLimited(getrlimkey(user, m.ChannelID, word)) {
 			// fmt.Println(m.ID, "| user", user, "| word", y, "is currently on cooldown")
 			continue
 		}
 
-		if start, end := checkHighlight(m.Content, word, user, m); start >= 0 && end >= 0 {
+		if start, end := checkHighlight(message, word, user, m); start >= 0 && end >= 0 {
 			// fmt.Println(m.ID, "| user", user, "| word", y, "everything is clear, marking new cooldowns and moving to send alert")
-			addLimit(getrlimkey(user, m.GuildID, ""), delayAny)
-			addLimit(getrlimkey(user, m.GuildID, word), delaySpecific)
+			addLimit(getrlimkey(user, m.ChannelID, ""), delayAny)
+			addLimit(getrlimkey(user, m.ChannelID, word), delaySpecific)
 
 			err = sendHighlight(s, m, user, m.Content[start:end], word)
 			return errors.Wrap(err, "@sendHighlight")
@@ -237,7 +240,6 @@ func sendHighlight(s *discordgo.Session, m *discordgo.MessageCreate, targetuser,
 		return errors.Wrap(err, "@s.ChannelMessageSendComplex (Send Highlight)")
 	}
 
-	// user nolock because its already locked
 	addDeletionQueue(msg.ID, msg.ChannelID, messageKeepTime)
 
 	return err
