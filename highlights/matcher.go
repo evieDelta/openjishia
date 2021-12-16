@@ -10,15 +10,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/eviedelta/openjishia/wlog"
 	"github.com/pkg/errors"
+	"golang.org/x/text/unicode/norm"
 )
 
-func in(s string, l []string) bool {
-	for _, x := range l {
-		if x == s {
-			return true
-		}
-	}
-	return false
+func NormaliseString(s string) string {
+	return strings.ToLower(norm.NFKC.String(s))
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -36,48 +32,53 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
-	globallock.RLock()
-	defer globallock.RUnlock()
-
-	if globalruntime.Guildsettings[m.GuildID] == nil {
-		return
-	}
-	if !globalruntime.Guildsettings[m.GuildID].Enable {
-		return
-	}
-	if len(m.Content) <= 1 {
+	if m.GuildID == "" || m.WebhookID != "" {
 		return
 	}
 
-	addLimit(getrlimkey(m.Author.ID, m.GuildID, ""), delaySelf)
+	if !isguildenabled(m.GuildID) {
+		return
+	}
+
+	addLimit(getrlimkey(m.Author.ID, m.ChannelID, ""), delaySelf)
 
 	//	fmt.Println("processing message: ", m.ID)
 
-	for u, d := range globalruntime.Guildsettings[m.GuildID].MemberSettings {
-		//		fmt.Println(m.ID, " | checking highlights for user ", u)
-		if isLimited(getrlimkey(u, m.GuildID, "")) || d.Disabled {
-			//			fmt.Println(m.ID, " | user ", u, " is currently on cooldown")
+	content := NormaliseString(m.Content)
+
+mainloop:
+	for _, hls := range guildHighlightsForHighlighter(m.GuildID) {
+		//fmt.Println(m.ID, " | checking highlights for user ", hls.UserID)
+		if isLimited(getrlimkey(hls.UserID, m.ChannelID, "")) || !hls.Enabled {
+			//fmt.Println(m.ID, " | user ", hls.UserID, " is currently on cooldown")
 			continue
 		}
-		if p, err := s.State.UserChannelPermissions(u, m.ChannelID); err != nil {
-			globalruntime.Guildsettings[m.GuildID].MemberSettings[u].Disabled = true
-			wlog.Err.Print(errors.Wrapf(err, "@s.State.UserChannelPermissions (Check Permission for user %v)", u))
+		if p, err := s.State.UserChannelPermissions(hls.UserID, m.ChannelID); err != nil {
+			toggleForUser(hls.UserID, m.GuildID, false)
+			wlog.Err.Print(errors.Wrapf(err, "@s.State.UserChannelPermissions (Check Permission for user %v)", hls.UserID))
 
 			continue
 		} else if p&discordgo.PermissionViewChannel == 0 {
-			//			fmt.Println(m.ID, " | user ", u, " does not have permissions to view channel")
-			continue
-		}
-		if d.Blocks[m.Author.ID].State || d.Blocks[m.ChannelID].State {
-			//			fmt.Println(m.ID, " | user ", u, " highlight blocked by user block config")
+			//fmt.Println(m.ID, " | user ", hls.UserID, " does not have permissions to view channel")
 			continue
 		}
 
-		//		fmt.Println(m.ID, " | user ", u, " going forward with highlight checking")
+		for _, id := range hls.ChannelBlocks {
+			if id == m.ChannelID {
+				//fmt.Println(m.ID, " | user ", hls.UserID, " channel blocked this message")
+				continue mainloop
+			}
+		}
+		for _, id := range hls.UserBlocks {
+			if id == m.Author.ID {
+				//fmt.Println(m.ID, " | user ", hls.UserID, " channel blocked this message")
+				continue mainloop
+			}
+		}
 
-		err := doUserHighlight(s, m, u, d)
+		err := doUserHighlight(s, m, content, hls.UserID, hls.Highlights)
 		if err != nil {
-			wlog.Err.Print(errors.Wrapf(err, "@doUserHighlight (For user %v)", u))
+			wlog.Err.Print(errors.Wrapf(err, "@doUserHighlight (For user %v)", hls.UserID))
 		}
 	}
 	return nil
@@ -86,12 +87,10 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 func indexCheck(r rune) bool { return unicode.IsSpace(r) || unicode.IsPunct(r) }
 
 func nextIndexAfter(l int, s string) int {
-	return strings.IndexFunc(s[l:],
-		func(r rune) bool { return unicode.IsSpace(r) || unicode.IsPunct(r) },
-	)
+	return strings.IndexFunc(s[l:], indexCheck)
 }
 
-func checkHighlight(mst string, y string, x *highlight, user string, m *discordgo.MessageCreate) (start, end int) {
+func checkHighlight(mst string, y string, user string, m *discordgo.MessageCreate) (start, end int) {
 	inc := 0
 	incTp := func() bool {
 		//	fmt.Println(m.ID, "| user", user, "| word", y, "| bumping area")
@@ -148,25 +147,25 @@ func checkHighlight(mst string, y string, x *highlight, user string, m *discordg
 	return -1, -1
 }
 
-func doUserHighlight(s *discordgo.Session, m *discordgo.MessageCreate, user string, settings *membersettings) (err error) {
-	if settings == nil || len(settings.Highlightwords) < 1 {
+func doUserHighlight(s *discordgo.Session, m *discordgo.MessageCreate, message, user string, highlights []string) (err error) {
+	if len(highlights) < 1 {
 		// fmt.Println(m.ID, "| user", user, "| user has no settings or no highlights")
 		return
 	}
 
-	for y, x := range settings.Highlightwords {
+	for _, word := range highlights {
 		// fmt.Println(m.ID, "| user", user, "| proccessing word", y)
-		if isLimited(getrlimkey(user, m.GuildID, y)) {
+		if isLimited(getrlimkey(user, m.ChannelID, word)) {
 			// fmt.Println(m.ID, "| user", user, "| word", y, "is currently on cooldown")
 			continue
 		}
 
-		if start, end := checkHighlight(m.Content, y, x, user, m); start >= 0 && end >= 0 {
+		if start, end := checkHighlight(message, word, user, m); start >= 0 && end >= 0 {
 			// fmt.Println(m.ID, "| user", user, "| word", y, "everything is clear, marking new cooldowns and moving to send alert")
-			addLimit(getrlimkey(user, m.GuildID, ""), delayAny)
-			addLimit(getrlimkey(user, m.GuildID, y), delaySpecific)
+			addLimit(getrlimkey(user, m.ChannelID, ""), delayAny)
+			addLimit(getrlimkey(user, m.ChannelID, word), delaySpecific)
 
-			err = sendHighlight(s, m, user, m.Content[start:end], y)
+			err = sendHighlight(s, m, user, m.Content[start:end], word)
 			return errors.Wrap(err, "@sendHighlight")
 		}
 	}
@@ -245,8 +244,7 @@ func sendHighlight(s *discordgo.Session, m *discordgo.MessageCreate, targetuser,
 		return errors.Wrap(err, "@s.ChannelMessageSendComplex (Send Highlight)")
 	}
 
-	// user nolock because its already locked
-	addDeletionQueueNoLock(msg.ID, msg.ChannelID, messageKeepTime)
+	addDeletionQueue(msg.ID, msg.ChannelID, messageKeepTime)
 
 	return err
 }
