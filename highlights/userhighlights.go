@@ -96,6 +96,13 @@ func cfAdd(ctx *drc.Context) error {
 		}
 	}
 
+	if len(list) >= 99 {
+		return drc.NewFailure(nil, "you have reached the highlight limit (99)")
+	}
+	if len([]rune(tem)) > 255 {
+		return drc.NewFailure(nil, "highlight text too long")
+	}
+
 	err = useraddhl(ctx.Mes.Author.ID, ctx.Mes.GuildID, tem)
 	if err != nil {
 		return err
@@ -346,7 +353,7 @@ func cfBlock(ctx *drc.Context) error {
 		}
 		for _, x := range list {
 			if x == arg {
-				return drc.NewParseError(nil, "you are already blocking that")
+				return drc.NewFailure(nil, "you are already blocking that")
 			}
 		}
 		list, err = userListUserBlocks(ctx.Mes.Author.ID, ctx.Mes.GuildID)
@@ -355,7 +362,7 @@ func cfBlock(ctx *drc.Context) error {
 		}
 		for _, x := range list {
 			if x == arg {
-				return drc.NewParseError(nil, "you are already blocking that")
+				return drc.NewFailure(nil, "you are already blocking that")
 			}
 		}
 	}

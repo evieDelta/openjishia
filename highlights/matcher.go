@@ -32,7 +32,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
-	if m.GuildID == "" || m.Author.Bot { // maybe we can unblock bots if we find a good solution to pk
+	if m.GuildID == "" || m.WebhookID != "" {
 		return
 	}
 
