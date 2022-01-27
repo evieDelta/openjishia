@@ -111,14 +111,6 @@ var hladd = &drc.Command{
 	Exec: cfAdd,
 }
 
-const notEnabledMessage = "Highlights are currently not enabled on this server\nUse ``hlconf enable`` (req: Manage Server) to enable"
-
-const maxHighlights = 40
-const maxHighlightLength = 128
-
-var maxHighlightsString = strconv.Itoa(maxHighlights)
-var maxHighlightLengthString = strconv.Itoa(maxHighlightLength)
-
 func cfAdd(ctx *drc.Context) error {
 	if !guildIsEnabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
