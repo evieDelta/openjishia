@@ -24,7 +24,7 @@ type SendLaterMeta struct {
 var _sendLater = &sendLater{
 	Conf: insched.HandlerConfig{
 		Precise:      false,
-		ScanPeriod:   time.Minute * 5,
+		ScanPeriod:   time.Hour,
 		DeferOnPanic: -1,
 	},
 }
