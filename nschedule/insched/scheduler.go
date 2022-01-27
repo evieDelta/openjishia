@@ -91,6 +91,10 @@ func (a *_action) scan(halt *bool, poke <-chan struct{}, wentWrong chan _failure
 
 			a.lastrun = time.Now()
 
+			if Debug {
+				wlog.Spam.Printf("Putting %v entries into live queue for %v", len(que), a.name)
+			}
+
 			// if the handler is precise we call the precise queuer, if not we call the dumb queuer
 			if a.han.Config().Precise {
 				a.queuePrecise(que, wentWrong, halt, poke, wg)
