@@ -164,7 +164,7 @@ func cfDebugView(ctx *drc.Context) error {
 	}
 
 	var ls string
-	list, err := userlshl(ctx.RawArgs[1], ctx.RawArgs[0])
+	list, err := userListHighlights(ctx.RawArgs[1], ctx.RawArgs[0])
 	if err != nil {
 		return err
 	}
@@ -206,7 +206,7 @@ func cfDebugRemove(ctx *drc.Context) error {
 	}
 
 	tem := strings.Join(ctx.RawArgs[2:], " ")
-	userremhl(user.ID, ctx.RawArgs[0], tem)
+	userRemoveHighlight(user.ID, ctx.RawArgs[0], tem)
 
 	_, err = ctx.Ses.ChannelMessageSendEmbed(ctx.Mes.ChannelID, &discordgo.MessageEmbed{
 		//		Author: &discordgo.MessageEmbedAuthor{

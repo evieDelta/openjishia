@@ -9,8 +9,8 @@ import (
 
 const (
 	delaySelf     = time.Minute * 5
-	delayAny      = time.Minute * 5
-	delaySpecific = time.Minute * 15
+	delayAny      = time.Minute * 1
+	delaySpecific = time.Minute * 10
 )
 
 var hlratelimit = map[string]time.Time{}

@@ -2,7 +2,6 @@ package highlights
 
 import (
 	"embed"
-	"fmt"
 
 	"github.com/eviedelta/openjishia/enpsql"
 	"github.com/eviedelta/openjishia/wlog"
@@ -23,13 +22,6 @@ type Database struct {
 	s *dbr.Session
 }
 
-func toggleForUser(userID, guildID string, toggleTo bool) {
-	_, err := db.s.Exec("update highlights.highlights set enabled = $3 where user_id = $1 and guild_id = $2", userID, guildID, toggleTo)
-	if err != nil {
-		fmt.Printf("Error toggling highlights for u:%v/g:%v: %v\n", userID, guildID, err)
-	}
-}
-
 type Highlight struct {
 	UserID        string
 	Enabled       bool
@@ -38,8 +30,8 @@ type Highlight struct {
 	UserBlocks    []string
 }
 
-func guildHighlightsForHighlighter(guildID string) (hls []Highlight) {
-	rows, err := db.s.Query("select user_id, enabled, words, channel_blocks, user_blocks from highlights.highlights where guild_id = $1", guildID)
+func guildGetAllHighlights(guildID string) (hls []Highlight) {
+	rows, err := db.s.Query("select user_id, enabled, words, blocked_channels, blocked_users from highlights.highlights where guild_id = $1", guildID)
 	if err != nil {
 		wlog.Err.Printf("Getting highlights for g:%v: %v", guildID, err)
 

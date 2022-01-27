@@ -25,37 +25,72 @@ var cmdhighlight = &drc.Command{
 		DMSettings:  drc.CommandDMsBlock,
 		Listable:    true,
 		MinimumArgs: 0,
+		BoolFlags: map[string]bool{
+			"old": true,
+		},
 	},
 	Exec: cfHighlight,
 }
 
 func cfHighlight(ctx *drc.Context) error {
-	ok := isguildenabled(ctx.Mes.GuildID)
-	list := ctx.Com.Subcommands.ListRecursiveStructured(false, 1)
-	ls := "SubCommands:\n"
-	for _, x := range list {
-		ls += " - " + x.Name + "\n"
+	ok := guildIsEnabled(ctx.Mes.GuildID)
+	if ctx.BoolFlags["old"] {
+		list := ctx.Com.Subcommands.ListRecursiveStructured(false, 1)
+		ls := "SubCommands:\n"
+		for _, x := range list {
+			ls += " - " + x.Name + "\n"
+		}
+		return ctx.Reply("Highlights enabled? ", ok, "\n```\n", ls, "```")
 	}
-	return ctx.Reply("Highlights enabled? ", ok, "\n```\n", ls, "```")
+
+	//	toggle := "Highlights are Disabled here"
+	//	if ok {
+	//		toggle = "Highlights are Enabled"
+	//	}
+	//
+	//	doc, ok := helputil.Get("highlights")
+	//	if !ok {
+	//		return drc.NewFailure(nil, "the help appears to be missing")
+	//	}
+
+	return ctx.Reply("reworked help command under construction")
 }
 
 func init() {
 	cmdhighlight.Subcommands.Add(hladd)
+	cmdhighlight.Subcommands.AddAliasString("a", "highlight", "add")
 	cmdhighlight.Subcommands.AddAliasString("+", "highlight", "add")
+
 	cmdhighlight.Subcommands.Add(hlremove)
-	cmdhighlight.Subcommands.AddAliasString("rem", "highlight", "remove")
 	cmdhighlight.Subcommands.AddAliasString("rm", "highlight", "remove")
-	cmdhighlight.Subcommands.AddAliasString("delete", "highlight", "remove")
+	cmdhighlight.Subcommands.AddAliasString("rem", "highlight", "remove")
+	cmdhighlight.Subcommands.AddAliasString("d", "highlight", "remove")
 	cmdhighlight.Subcommands.AddAliasString("del", "highlight", "remove")
+	cmdhighlight.Subcommands.AddAliasString("delete", "highlight", "remove")
 	cmdhighlight.Subcommands.AddAliasString("-", "highlight", "remove")
+
 	cmdhighlight.Subcommands.Add(cClear)
+	cmdhighlight.Subcommands.AddAliasString("c", "highlight", "clear")
+	cmdhighlight.Subcommands.AddAliasString("cl", "highlight", "clear")
+	cmdhighlight.Subcommands.AddAliasString("dall", "highlight", "clear")
 	cmdhighlight.Subcommands.AddAliasString("rall", "highlight", "clear")
 
 	cmdhighlight.Subcommands.Add(hlList)
+	cmdhighlight.Subcommands.AddAliasString("l", "highlight", "list")
+	cmdhighlight.Subcommands.AddAliasString("ls", "highlight", "list")
+	cmdhighlight.Subcommands.AddAliasString("=", "highlight", "list")
+
 	cmdhighlight.Subcommands.Add(hlBlock)
+	cmdhighlight.Subcommands.AddAliasString("blk", "highlight", "block")
+	cmdhighlight.Subcommands.AddAliasString("b+", "highlight", "block")
 	cmdhighlight.Subcommands.Add(hlUnblock)
+	cmdhighlight.Subcommands.AddAliasString("ublk", "highlight", "unblock")
+	cmdhighlight.Subcommands.AddAliasString("unblk", "highlight", "unblock")
+	cmdhighlight.Subcommands.AddAliasString("b-", "highlight", "unblock")
 	cmdhighlight.Subcommands.Add(hlBlocking)
+	cmdhighlight.Subcommands.AddAliasString("bls", "highlight", "blocking")
 	cmdhighlight.Subcommands.AddAliasString("blocklist", "highlight", "blocking")
+	cmdhighlight.Subcommands.AddAliasString("b=", "highlight", "blocking")
 	cmdhighlight.Subcommands.Add(hlTest)
 }
 
@@ -78,15 +113,21 @@ var hladd = &drc.Command{
 
 const notEnabledMessage = "Highlights are currently not enabled on this server\nUse ``hlconf enable`` (req: Manage Server) to enable"
 
+const maxHighlights = 40
+const maxHighlightLength = 128
+
+var maxHighlightsString = strconv.Itoa(maxHighlights)
+var maxHighlightLengthString = strconv.Itoa(maxHighlightLength)
+
 func cfAdd(ctx *drc.Context) error {
-	if !isguildenabled(ctx.Mes.GuildID) {
+	if !guildIsEnabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
 	}
 
 	tem := strings.Join(ctx.RawArgs, " ")
 	tem = NormaliseString(tem)
 
-	list, err := userlshl(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+	list, err := userListHighlights(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
 		return err
 	}
@@ -96,14 +137,14 @@ func cfAdd(ctx *drc.Context) error {
 		}
 	}
 
-	if len(list) >= 99 {
-		return drc.NewFailure(nil, "you have reached the highlight limit (99)")
+	if len(list) >= maxHighlights {
+		return drc.NewFailure(nil, "you have reached the highlight limit (max: "+maxHighlightsString+")")
 	}
-	if len([]rune(tem)) > 255 {
-		return drc.NewFailure(nil, "highlight text too long")
+	if len([]rune(tem)) > maxHighlightLength {
+		return drc.NewFailure(nil, "highlight text too long (max: "+maxHighlightLengthString+" char)")
 	}
 
-	err = useraddhl(ctx.Mes.Author.ID, ctx.Mes.GuildID, tem)
+	err = userAddHighlight(ctx.Mes.Author.ID, ctx.Mes.GuildID, tem)
 	if err != nil {
 		return err
 	}
@@ -148,7 +189,7 @@ func cfRemove(ctx *drc.Context) error {
 	tem := strings.Join(ctx.RawArgs, " ")
 
 	if ctx.BoolFlags["index"] {
-		hls, err := userlshl(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+		hls, err := userListHighlights(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 		if err != nil {
 			return err
 		}
@@ -165,7 +206,7 @@ func cfRemove(ctx *drc.Context) error {
 		tem = hls[i]
 	}
 
-	err := userremhl(ctx.Mes.Author.ID, ctx.Mes.GuildID, tem)
+	err := userRemoveHighlight(ctx.Mes.Author.ID, ctx.Mes.GuildID, tem)
 	if err != nil {
 		return err
 	}
@@ -203,7 +244,7 @@ var cClear = &drc.Command{
 }
 
 func cfClear(ctx *drc.Context) error {
-	hls, err := userlshl(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+	hls, err := userListHighlights(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
 		return err
 	}
@@ -215,7 +256,7 @@ func cfClear(ctx *drc.Context) error {
 	}
 	str += "```"
 
-	err = userHlClear(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+	err = userClearHighlights(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
 		return err
 	}
@@ -250,9 +291,9 @@ var hlList = &drc.Command{
 }
 
 func cfList(ctx *drc.Context) error {
-	ok := isguildenabled(ctx.Mes.GuildID)
+	ok := guildIsEnabled(ctx.Mes.GuildID)
 	ls := ""
-	list, err := userlshl(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+	list, err := userListHighlights(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
 		return err
 	}
@@ -302,7 +343,7 @@ var hlBlock = &drc.Command{
 }
 
 func cfBlock(ctx *drc.Context) error {
-	if !isguildenabled(ctx.Mes.GuildID) {
+	if !guildIsEnabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
 	}
 	const (
@@ -347,7 +388,7 @@ func cfBlock(ctx *drc.Context) error {
 
 	// check if a user is already blocking something to prevent duplicates
 	{
-		list, err := userListChannelBlocks(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+		list, err := userBlockedChannels(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 		if err != nil {
 			return err
 		}
@@ -356,7 +397,7 @@ func cfBlock(ctx *drc.Context) error {
 				return drc.NewFailure(nil, "you are already blocking that")
 			}
 		}
-		list, err = userListUserBlocks(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+		list, err = userBlockedMembers(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 		if err != nil {
 			return err
 		}
@@ -373,9 +414,9 @@ func cfBlock(ctx *drc.Context) error {
 	default:
 		return drc.NewFailure(nil, "uh oh something did not work")
 	case user:
-		err = userAddUserBlock(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg)
+		err = userBlockMember(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg)
 	case channel:
-		err = userAddChannelBlock(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg)
+		err = userBlockChannel(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg)
 	}
 
 	if err != nil {
@@ -433,7 +474,7 @@ func cfUnblock(ctx *drc.Context) error {
 			return err
 		}
 		arg = m.User.ID
-		res = m.User.String()
+		res = "`" + m.User.String() + "`"
 		kind = user
 	} else if ctx.BoolFlags["channel"] {
 		c, _, err := ctx.Args[0].Channel(ctx)
@@ -441,14 +482,14 @@ func cfUnblock(ctx *drc.Context) error {
 			return err
 		}
 		arg = c.ID
-		res = c.Name
+		res = "`" + c.Name + "`"
 		kind = channel
 	} else if ctx.BoolFlags["index"] {
-		ublls, err := userListUserBlocks(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+		ublls, err := userBlockedMembers(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 		if err != nil {
 			return err
 		}
-		cblls, err := userListChannelBlocks(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+		cblls, err := userBlockedChannels(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 		if err != nil {
 			return err
 		}
@@ -467,22 +508,22 @@ func cfUnblock(ctx *drc.Context) error {
 		arg = blls[i]
 		if i >= len(ublls) && len(cblls) != 0 {
 			kind = channel
-			res = "#" + arg + " / " + ctx.RawArgs[0]
+			res = "<#" + arg + "> / " + ctx.RawArgs[0]
 		} else {
 			kind = user
-			res = "@" + arg + " / " + ctx.RawArgs[0]
+			res = "<@" + arg + "> / " + ctx.RawArgs[0]
 		}
 	} else {
 		m, _, err := ctx.Args[0].Member(ctx)
 		if err == nil {
 			arg = m.User.ID
-			res = m.User.String()
+			res = "`" + m.User.String() + "`"
 			kind = user
 		} else {
 			c, _, err := ctx.Args[0].Channel(ctx)
 			if err == nil {
 				arg = c.ID
-				res = c.Name
+				res = "`" + c.Name + "`"
 				kind = channel
 			} else {
 				return drc.NewFailure(nil, "404 Not found", "Could not find channel or member")
@@ -496,9 +537,9 @@ func cfUnblock(ctx *drc.Context) error {
 	default:
 		return drc.NewFailure(nil, "uh oh something did not a work")
 	case user:
-		err = userRemUserBlock(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg)
+		err = userUnblockMember(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg)
 	case channel:
-		err = userRemChannelBlock(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg)
+		err = userUnblockChannel(ctx.Mes.Author.ID, ctx.Mes.GuildID, arg)
 	}
 
 	if err != nil {
@@ -510,7 +551,7 @@ func cfUnblock(ctx *drc.Context) error {
 		//	Name:    ctx.Mes.Author.Username + "'s Highlights",
 		//	IconURL: ctx.Mes.Author.AvatarURL("128"),
 		//},
-		Description: "Removed ``" + res + "`` from your blocklist",
+		Description: "Removed " + res + " from your blocklist",
 		Color:       ctx.Ses.State.UserColor(ctx.Mes.Author.ID, ctx.Mes.ChannelID),
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		Footer: &discordgo.MessageEmbedFooter{
@@ -539,11 +580,11 @@ var hlBlocking = &drc.Command{
 }
 
 func cfBlocking(ctx *drc.Context) error {
-	ublls, err := userListUserBlocks(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+	ublls, err := userBlockedMembers(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
 		return err
 	}
-	cblls, err := userListChannelBlocks(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+	cblls, err := userBlockedChannels(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
 		return err
 	}
@@ -602,13 +643,13 @@ var truefalseemote = map[bool]string{
 }
 
 func cfTest(ctx *drc.Context) error {
-	if !isguildenabled(ctx.Mes.GuildID) {
+	if !guildIsEnabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
 	}
 
 	tem := strings.Join(ctx.RawArgs, " ")
 
-	highlights, err := userlshl(ctx.Mes.Author.ID, ctx.Mes.GuildID)
+	highlights, err := userListHighlights(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
 		return err
 	}

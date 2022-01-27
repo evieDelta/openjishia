@@ -1,11 +1,13 @@
 package highlights
 
 import (
+	"embed"
 	"fmt"
 
 	"codeberg.org/eviedelta/drc"
 	"github.com/bwmarrin/discordgo"
 	"github.com/eviedelta/openjishia/enpsql"
+	"github.com/eviedelta/openjishia/helputil"
 	"github.com/eviedelta/openjishia/module"
 )
 
@@ -53,9 +55,16 @@ func guildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 }
 
 func onMemberCreate(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
-	toggleForUser(m.User.ID, m.GuildID, true)
+	userSetEnabled(m.User.ID, m.GuildID, true)
 }
 
 func onMemberLeave(s *discordgo.Session, m *discordgo.GuildMemberRemove) {
-	toggleForUser(m.User.ID, m.GuildID, false)
+	userSetEnabled(m.User.ID, m.GuildID, false)
+}
+
+//go:embed topics/*
+var docs embed.FS
+
+func init() {
+	helputil.MustAddFS(docs)
 }
