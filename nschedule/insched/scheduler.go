@@ -14,16 +14,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type _blocking struct {
+type blocking struct {
 	list map[uint64]bool
 	mu   sync.RWMutex
 }
 
-func (b *_blocking) add(i uint64)      { b.mu.Lock(); defer b.mu.Unlock(); b.list[i] = true }
-func (b *_blocking) rem(i uint64)      { b.mu.Lock(); defer b.mu.Unlock(); delete(b.list, i) }
-func (b *_blocking) get(i uint64) bool { b.mu.RLock(); defer b.mu.RUnlock(); return b.list[i] }
+func (b *blocking) add(i uint64)      { b.mu.Lock(); defer b.mu.Unlock(); b.list[i] = true }
+func (b *blocking) rem(i uint64)      { b.mu.Lock(); defer b.mu.Unlock(); delete(b.list, i) }
+func (b *blocking) get(i uint64) bool { b.mu.RLock(); defer b.mu.RUnlock(); return b.list[i] }
 
-type _action struct {
+type action struct {
 	han Handler
 	sch *Scheduler
 
@@ -31,10 +31,10 @@ type _action struct {
 	name string
 
 	lastrun time.Time
-	b       _blocking
+	block   blocking
 }
 
-type _failure struct {
+type failure struct {
 	Error   error
 	Handler string
 	Break   bool
@@ -43,25 +43,25 @@ type _failure struct {
 	Requested bool
 }
 
-func (a *_action) scan(halt *bool, poke <-chan struct{}, wentWrong chan _failure) {
+func (a *action) scan(halt *bool, poke <-chan struct{}, wentWrong chan failure) {
 	// ticker to scan at a set interval
 	t := time.NewTicker(a.han.Config().ScanPeriod)
 	defer t.Stop()
-	tc := t.C
+	ticker := t.C
 
-	// waitgroup to make sure everything has exited before exiting out
+	// wg to make sure everything has exited before exiting out
 	wg := &sync.WaitGroup{}
 
-	// had to add this jankyness to the once reset
+	// had to add this jankiness to the once reset
 	// because it panicked from unlocking an unlocked mutex
-	// if i reset it from within the onced function
-	doonce := func() {}
-	defer doonce()
+	// if i reset it from within the once function
+	resetOnce := func() {}
+	defer resetOnce()
 
 	// make sure only one runs at a time
 	a.once.Do(func() {
 		defer func() {
-			doonce = func() { a.once = sync.Once{} } // but allow another one to start when it exits
+			resetOnce = func() { a.once = sync.Once{} } // but allow another one to start when it exits
 		}()
 
 		wg.Add(1)
@@ -76,12 +76,12 @@ func (a *_action) scan(halt *bool, poke <-chan struct{}, wentWrong chan _failure
 			//			wlog.Spam.Printf("running scheduler for %v", a.name)
 
 			// get pending requests
-			que, err := a.sch.db.GetPending(a.name,
+			queue, err := a.sch.db.GetPending(a.name,
 				time.Now().UTC().Add(a.han.Config().ScanPeriod+time.Second), // but also include the next second just so we get any on the edge now
 			)
 			if err != nil {
 				// uh oh spaghetti oes
-				wentWrong <- _failure{
+				wentWrong <- failure{
 					Error:   err,
 					Handler: a.name,
 					Break:   true, // break here as its most likely a database problem
@@ -92,14 +92,14 @@ func (a *_action) scan(halt *bool, poke <-chan struct{}, wentWrong chan _failure
 			a.lastrun = time.Now()
 
 			if Debug {
-				wlog.Spam.Printf("Putting %v entries into live queue for %v", len(que), a.name)
+				wlog.Spam.Printf("Putting %v entries into live queue for %v", len(queue), a.name)
 			}
 
 			// if the handler is precise we call the precise queuer, if not we call the dumb queuer
 			if a.han.Config().Precise {
-				a.queuePrecise(que, wentWrong, halt, poke, wg)
+				a.queuePrecise(queue, wentWrong, halt, poke, wg)
 			} else {
-				a.queue(que, wentWrong, halt, poke, wg) // queueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueue
+				a.queue(queue, wentWrong, halt, poke, wg) // queueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueueue
 			}
 
 			// check for a halt request before waiting
@@ -110,7 +110,7 @@ func (a *_action) scan(halt *bool, poke <-chan struct{}, wentWrong chan _failure
 			// typically we wait on the timer
 			// but in the case we want to close out it'll also jump past when we do that
 			select {
-			case <-tc:
+			case <-ticker:
 			case <-poke:
 				break
 			}
@@ -121,29 +121,29 @@ func (a *_action) scan(halt *bool, poke <-chan struct{}, wentWrong chan _failure
 }
 
 // dumb queue, this one executes them whenever it does
-func (a *_action) queue(que []Entry, wentWrong chan _failure, halt *bool, poke <-chan struct{}, wg *sync.WaitGroup) {
+func (a *action) queue(queue []Entry, wentWrong chan failure, halt *bool, poke <-chan struct{}, wg *sync.WaitGroup) {
 	// lets at least put them in the right order though
-	sort.Slice(que, func(i, j int) bool {
-		return que[i].Time.Before(que[j].Time)
+	sort.Slice(queue, func(i, j int) bool {
+		return queue[i].Time.Before(queue[j].Time)
 	})
 
 	// we might not be precise but lets evenly spread them across the scan period at least instead of going rapidfire
-	t := time.NewTicker(a.han.Config().ScanPeriod / time.Duration(len(que)+1))
-	defer t.Stop()
+	timer := time.NewTicker(a.han.Config().ScanPeriod / time.Duration(len(queue)+1))
+	defer timer.Stop()
 
-	for _, x := range que {
-		if a.b.get(x.ID) {
+	for _, entry := range queue {
+		if a.block.get(entry.ID) {
 			continue
 		}
 		//		wlog.Spam.Printf("queuing id:%v in %v", x.ID, a.han.Config().ScanPeriod/time.Duration(len(que)+1))
 
-		go a.doEntry(x, wentWrong, wg)
+		go a.doEntry(entry, wentWrong, wg)
 
 		// wait for either the next tick, or a cancelation
 		select {
 		case <-poke:
 			break
-		case <-t.C:
+		case <-timer.C:
 		}
 
 		if !*halt { // exit if requested
@@ -153,30 +153,30 @@ func (a *_action) queue(que []Entry, wentWrong chan _failure, halt *bool, poke <
 }
 
 // smarter queue, this one executes them about as on the dot as it'll get by time.Sleeping them to the moment
-func (a *_action) queuePrecise(que []Entry, wentWrong chan _failure, halt *bool, poke <-chan struct{}, wg *sync.WaitGroup) {
+func (a *action) queuePrecise(queue []Entry, wentWrong chan failure, halt *bool, poke <-chan struct{}, wg *sync.WaitGroup) {
 	// we put them in order, so we only need to wait on the next one up at each moment
 	// and we can have less go routines active waiting at a time as a result
-	sort.Slice(que, func(i, j int) bool {
-		return que[i].Time.Before(que[j].Time)
+	sort.Slice(queue, func(i, j int) bool {
+		return queue[i].Time.Before(queue[j].Time)
 	})
 
-	t := time.NewTimer(time.Millisecond)
-	<-t.C
+	timer := time.NewTimer(time.Millisecond)
+	<-timer.C
 
-	for _, x := range que {
-		if a.b.get(x.ID) {
+	for _, entry := range queue {
+		if a.block.get(entry.ID) {
 			continue
 		}
 
-		t.Reset(x.Time.Sub(time.Now().UTC()))
+		timer.Reset(entry.Time.Sub(time.Now().UTC()))
 
 		//		wlog.Spam.Printf("precice queuing id:%v in %v", x.ID, x.Time.Sub(time.Now().UTC()))
 
 		// wait for the next one in the queue
 		select {
-		case <-t.C:
+		case <-timer.C:
 		case <-poke:
-			t.Stop()
+			timer.Stop()
 			break
 		}
 
@@ -185,14 +185,14 @@ func (a *_action) queuePrecise(que []Entry, wentWrong chan _failure, halt *bool,
 		}
 
 		// execute the next entry, using a go routine so a slow task won't hold up the next ones in queue
-		go a.doEntry(x, wentWrong, wg)
+		go a.doEntry(entry, wentWrong, wg)
 	}
 }
 
 var Debug bool
 
 // entry executers
-func (a *_action) doEntry(x Entry, wentWrong chan _failure, wg *sync.WaitGroup) (no bool) {
+func (a *action) doEntry(entry Entry, wentWrong chan failure, wg *sync.WaitGroup) (no bool) {
 	// oops protection
 	defer func() {
 		er := recover()
@@ -200,11 +200,11 @@ func (a *_action) doEntry(x Entry, wentWrong chan _failure, wg *sync.WaitGroup) 
 			return
 		}
 
-		a.b.add(x.ID) // as we've panicked prevent this event from running again until a restart
-		no = true     // if this is run directly by the schedule function (and not run by the scanner) we use this to tell it to not remove it from the blocker
+		a.block.add(entry.ID) // as we've panicked prevent this event from running again until a restart
+		no = true             // if this is run directly by the schedule function (and not run by the scanner) we use this to tell it to not remove it from the blocker
 
 		// we do the finish entry system, but we use the deferOnPanic setting instead
-		a.finishEntry(a.han.Config().DeferOnPanic, x, wentWrong)
+		a.finishEntry(a.han.Config().DeferOnPanic, entry, wentWrong)
 
 		// get where the panic happened so we can include it in the error
 		_, f, l, ok := runtime.Caller(2)
@@ -222,13 +222,13 @@ func (a *_action) doEntry(x Entry, wentWrong chan _failure, wg *sync.WaitGroup) 
 		}
 
 		// and send it
-		wentWrong <- _failure{
+		wentWrong <- failure{
 			Error:   err,
 			Handler: a.name,
 			Break:   false, // don't need to break here, its probably just an error in the handler
 
 			Entry: &LoggerEntry{
-				Entry: x,
+				Entry: entry,
 			},
 		}
 	}()
@@ -238,19 +238,19 @@ func (a *_action) doEntry(x Entry, wentWrong chan _failure, wg *sync.WaitGroup) 
 	defer wg.Done()
 
 	if Debug {
-		wlog.Spam.Printf("Action: %v, ID: %v, Defer? %v\n`%v`\n\n```\n%v\n```", x.Action, x.ID, x.DeferCount, x.Time.Format("2006-01-02 15:04:05"), x.Details)
+		wlog.Spam.Printf("Action: %v, ID: %v, Defer? %v\n`%v`\n\n```\n%v\n```", entry.Action, entry.ID, entry.DeferCount, entry.Time.Format("2006-01-02 15:04:05"), entry.Details)
 	}
 
 	// call the handler with the entry data
-	def, err := a.han.Call(x)
+	def, err := a.han.Call(entry)
 	if err != nil {
-		wentWrong <- _failure{
+		wentWrong <- failure{
 			Error:   err,
 			Handler: a.name,
 			Break:   false, // don't need to break here, its probably just an error in the handler
 
 			Entry: &LoggerEntry{
-				Entry:    x,
+				Entry:    entry,
 				Deferred: def > 0,
 				DeferLen: def,
 			},
@@ -258,34 +258,34 @@ func (a *_action) doEntry(x Entry, wentWrong chan _failure, wg *sync.WaitGroup) 
 	}
 
 	// take care of removal or defering
-	a.finishEntry(def, x, wentWrong)
+	a.finishEntry(def, entry, wentWrong)
 
 	return
 }
 
-func (a *_action) finishEntry(d time.Duration, x Entry, wentWrong chan _failure) {
+func (a *action) finishEntry(d time.Duration, entry Entry, wentWrong chan failure) {
 	var err error
 
 	switch {
 	case d > 0:
 		// if a handler has requested we defer, we do that
-		err = a.sch.db.Defer(x.ID, d)
+		err = a.sch.db.Defer(entry.ID, d)
 	case d == 0:
 		// else we just remove the event as its done now
-		err = a.sch.db.Remove(x.ID)
+		err = a.sch.db.Remove(entry.ID)
 	case d < 0:
 		// unless its requested we do nothing at all
 		return
 	}
 
 	if err != nil {
-		wentWrong <- _failure{
+		wentWrong <- failure{
 			Error:   errors.Wrap(err, "error removing or deferring entry"),
 			Handler: a.name,
 			Break:   true, // break here because its likely a database error and signifies something may be wrong with the database connection
 
 			Entry: &LoggerEntry{
-				Entry:    x,
+				Entry:    entry,
 				Deferred: d > 0,
 				DeferLen: d,
 			},
@@ -296,7 +296,7 @@ func (a *_action) finishEntry(d time.Duration, x Entry, wentWrong chan _failure)
 // New scheduler
 func New(db Database) *Scheduler {
 	return &Scheduler{
-		actions: make(map[string]*_action),
+		actions: make(map[string]*action),
 		db:      db,
 		closing: true, // start off closed
 		wg:      &sync.WaitGroup{},
@@ -307,12 +307,12 @@ func New(db Database) *Scheduler {
 
 // Scheduler manages schedule stuff or something
 type Scheduler struct {
-	actions map[string]*_action
-	db      Database
-	mu      sync.Mutex
-	closing bool
-	ww      chan _failure
-	wg      *sync.WaitGroup
+	actions   map[string]*action
+	db        Database
+	mu        sync.Mutex
+	closing   bool
+	wentWrong chan failure
+	wg        *sync.WaitGroup
 
 	Log Logger
 }
@@ -342,15 +342,15 @@ func (S *Scheduler) Run() error {
 	poke := make(chan struct{}, len(S.actions))
 
 	// refresh this
-	S.ww = make(chan _failure)
-	defer func() { close(S.ww); S.ww = nil }() // eliminate it on close though
+	S.wentWrong = make(chan failure)
+	defer func() { close(S.wentWrong); S.wentWrong = nil }() // eliminate it on close though
 
 	// start up all the handlers
 	for _, x := range S.actions {
-		y := x
+		action := x
 		go func() {
 			wg.Add(1)
-			y.scan(run, poke, S.ww)
+			action.scan(run, poke, S.wentWrong)
 
 			wg.Done()
 		}()
@@ -358,7 +358,7 @@ func (S *Scheduler) Run() error {
 
 	// error management
 	for {
-		f := <-S.ww
+		f := <-S.wentWrong
 
 		if !f.Requested { // don't need to log requested closures
 			S.Log.Error(f.Error, f.Handler, f.Break, f.Entry)
@@ -393,11 +393,11 @@ func (S *Scheduler) Run() error {
 // Stop starts the process of stopping any currently running scheduler
 // and waits until Run exits
 func (S *Scheduler) Stop() {
-	if S.ww == nil {
+	if S.wentWrong == nil {
 		return
 	}
 	S.closing = true
-	S.ww <- _failure{
+	S.wentWrong <- failure{
 		Break:     true,
 		Requested: true,
 	}
@@ -418,20 +418,20 @@ func (S *Scheduler) AddHandler(name string, a Handler) error {
 		return errors.New("cannot create a nil handler")
 	}
 
-	S.actions[name] = &_action{
+	S.actions[name] = &action{
 		han: a,
 		sch: S,
 
 		once: sync.Once{},
 		name: name,
 
-		b: _blocking{list: make(map[uint64]bool)},
+		block: blocking{list: make(map[uint64]bool)},
 	}
 
 	return nil
 }
 
-// Schedule an event to be called at a specifed time with the specifed handler and metadata
+// Schedule an event to be called at a specified time with the specified handler and metadata
 // the meta data is stored in JSON in the database, and given to the handler as JSON
 // this function can be used directly
 // though its recommended to wrap this with handler specific functions for type safety in the meta data input
@@ -462,11 +462,11 @@ func (S *Scheduler) Schedule(at time.Time, handler string, data interface{}) (En
 	act := S.actions[handler]
 	if at.Before(act.lastrun.Add(act.han.Config().ScanPeriod)) {
 		go func() {
-			act.b.add(e.ID) // thingy so the main scanner won't also try execute it if we're doing it here
+			act.block.add(e.ID) // thingy so the main scanner won't also try execute it if we're doing it here
 			time.Sleep(at.Sub(time.Now()))
-			no := act.doEntry(e, S.ww, S.wg)
+			no := act.doEntry(e, S.wentWrong, S.wg)
 			if !no {
-				act.b.rem(e.ID) // if not no we allow it again
+				act.block.rem(e.ID) // if not no we allow it again
 			}
 		}()
 	}
