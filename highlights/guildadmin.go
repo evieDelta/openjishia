@@ -11,8 +11,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// hlconf change settings about the highlights
-var hlconf = &drc.Command{
+// cConf change settings about the highlights
+var cConf = &drc.Command{
 	Name:         "hlconf",
 	Manual:       []string{"change settings about the highlights"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -38,24 +38,24 @@ func cfHlconf(ctx *drc.Context) error {
 }
 
 func init() {
-	hlconf.Subcommands.Add(hlconfEnable)
-	hlconf.Subcommands.Add(hlconfDisable)
+	cConf.Subcommands.Add(confEnable)
+	cConf.Subcommands.Add(confDisable)
 
-	hlconf.Subcommands.Add(cModBlock)
-	hlconf.Subcommands.AddAliasString("blk", "hlmod", "block")
-	hlconf.Subcommands.AddAliasString("b+", "hlmod", "block")
-	hlconf.Subcommands.Add(cModUnblock)
-	hlconf.Subcommands.AddAliasString("ublk", "hlmod", "unblock")
-	hlconf.Subcommands.AddAliasString("unblk", "hlmod", "unblock")
-	hlconf.Subcommands.AddAliasString("b-", "hlmod", "unblock")
-	hlconf.Subcommands.Add(cModBlocking)
-	hlconf.Subcommands.AddAliasString("bls", "hlmod", "blocking")
-	hlconf.Subcommands.AddAliasString("blocklist", "hlmod", "blocking")
-	hlconf.Subcommands.AddAliasString("b=", "hlmod", "blocking")
+	cConf.Subcommands.Add(confBlock)
+	cConf.Subcommands.AddAliasString("blk", "hlmod", "block")
+	cConf.Subcommands.AddAliasString("b+", "hlmod", "block")
+	cConf.Subcommands.Add(confUnblock)
+	cConf.Subcommands.AddAliasString("ublk", "hlmod", "unblock")
+	cConf.Subcommands.AddAliasString("unblk", "hlmod", "unblock")
+	cConf.Subcommands.AddAliasString("b-", "hlmod", "unblock")
+	cConf.Subcommands.Add(confBlocking)
+	cConf.Subcommands.AddAliasString("bls", "hlmod", "blocking")
+	cConf.Subcommands.AddAliasString("blocklist", "hlmod", "blocking")
+	cConf.Subcommands.AddAliasString("b=", "hlmod", "blocking")
 }
 
-// enable enables highlights in a server
-var hlconfEnable = &drc.Command{
+// confEnable highlights in a server
+var confEnable = &drc.Command{
 	Name:         "enable",
 	Manual:       []string{"enables highlights in a server"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -67,10 +67,10 @@ var hlconfEnable = &drc.Command{
 		Listable:    true,
 		MinimumArgs: 0,
 	},
-	Exec: cfEnable,
+	Exec: cfConfEnable,
 }
 
-func cfEnable(ctx *drc.Context) error {
+func cfConfEnable(ctx *drc.Context) error {
 	err := guildSetEnabled(ctx.Mes.GuildID, true)
 	if err != nil {
 		return err
@@ -78,8 +78,8 @@ func cfEnable(ctx *drc.Context) error {
 	return ctx.Reply("Highlights are now on")
 }
 
-// disable disables highlights in a server
-var hlconfDisable = &drc.Command{
+// confDisable highlights in a server
+var confDisable = &drc.Command{
 	Name:         "disable",
 	Manual:       []string{"disables highlights in a server"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -91,10 +91,10 @@ var hlconfDisable = &drc.Command{
 		Listable:    true,
 		MinimumArgs: 0,
 	},
-	Exec: cfDisable,
+	Exec: cfConfDisable,
 }
 
-func cfDisable(ctx *drc.Context) error {
+func cfConfDisable(ctx *drc.Context) error {
 	err := guildSetEnabled(ctx.Mes.GuildID, false)
 	if err != nil {
 		return err
@@ -102,8 +102,8 @@ func cfDisable(ctx *drc.Context) error {
 	return ctx.Reply("Highlights are now off")
 }
 
-// hlmod moderation commands for highlights
-var hlmod = &drc.Command{
+// cMod moderation commands for highlights
+var cMod = &drc.Command{
 	Name:         "hlmod",
 	Manual:       []string{"moderation commands for highlights"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -129,8 +129,8 @@ func cfHlmod(ctx *drc.Context) error {
 }
 
 func init() {
-	hlmod.Subcommands.Add(modView)
-	hlmod.Subcommands.Add(modRemove)
+	cMod.Subcommands.Add(modView)
+	cMod.Subcommands.Add(modRemove)
 }
 
 // view views another users highlights
@@ -219,8 +219,8 @@ func cfModRemove(ctx *drc.Context) error {
 	return err
 }
 
-// block blocks a channel or category globally for a guild
-var cModBlock = &drc.Command{
+// confBlock a channel or category globally for a guild
+var confBlock = &drc.Command{
 	Name:         "block",
 	Manual:       []string{"blocks a channel or category globally for a guild"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -232,10 +232,10 @@ var cModBlock = &drc.Command{
 		Listable:    true,
 		MinimumArgs: 1,
 	},
-	Exec: cfModBlock,
+	Exec: cfConfBlock,
 }
 
-func cfModBlock(ctx *drc.Context) error {
+func cfConfBlock(ctx *drc.Context) error {
 	if !guildIsEnabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
 	}
@@ -286,8 +286,8 @@ func cfModBlock(ctx *drc.Context) error {
 	return err
 }
 
-// block blocks a channel or category globally for a guild
-var cModUnblock = &drc.Command{
+// confUnblock a channel or category globally for a guild
+var confUnblock = &drc.Command{
 	Name:         "unblock",
 	Manual:       []string{"unblocks a channel from the guild level"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -302,29 +302,29 @@ var cModUnblock = &drc.Command{
 			"index": false,
 		},
 	},
-	Exec: cfModUnblock,
+	Exec: cfConfUnblock,
 }
 
-func cfModUnblock(ctx *drc.Context) error {
+func cfConfUnblock(ctx *drc.Context) error {
 	arg := ""
 	res := ""
 
 	if ctx.BoolFlags["index"] {
-		blls, err := guildBlockedChannels(ctx.Mes.GuildID)
+		blocklist, err := guildBlockedChannels(ctx.Mes.GuildID)
 		if err != nil {
 			return err
 		}
-		sort.Strings(blls)
+		sort.Strings(blocklist)
 
 		i, err := ctx.Args[0].Int()
 		if err != nil {
 			return err
 		}
-		if i >= len(blls) {
+		if i >= len(blocklist) {
 			return drc.NewParseError(nil, "invalid index (use `hl blocking` to view)")
 		}
 
-		arg = blls[i]
+		arg = blocklist[i]
 		res = "<#" + arg + "> / " + ctx.RawArgs[0]
 	} else {
 		c, _, err := ctx.Args[0].Channel(ctx)
@@ -356,8 +356,8 @@ func cfModUnblock(ctx *drc.Context) error {
 	return err
 }
 
-// block blocks a channel or category globally for a guild
-var cModBlocking = &drc.Command{
+// confBlocking views all the channels blocked globally for a guild
+var confBlocking = &drc.Command{
 	Name:         "blocking",
 	Manual:       []string{"views all guild blocked channels"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -369,22 +369,22 @@ var cModBlocking = &drc.Command{
 		Listable:    true,
 		MinimumArgs: 0,
 	},
-	Exec: cfModBlocking,
+	Exec: cfConfBlocking,
 }
 
-func cfModBlocking(ctx *drc.Context) error {
-	blls, err := guildBlockedChannels(ctx.Mes.GuildID)
+func cfConfBlocking(ctx *drc.Context) error {
+	blocklist, err := guildBlockedChannels(ctx.Mes.GuildID)
 	if err != nil {
 		return err
 	}
-	sort.Strings(blls)
-	chls := ""
+	sort.Strings(blocklist)
+	resp := ""
 
-	for i, id := range blls {
-		chls += fmt.Sprintf("%2.1v. <#%v>\n", i, id)
+	for i, id := range blocklist {
+		resp += fmt.Sprintf("%2.1v. <#%v>\n", i, id)
 	}
-	if len(blls) == 0 {
-		chls = "No channels are blocked"
+	if len(blocklist) == 0 {
+		resp = "No channels are blocked"
 	}
 
 	g, err := ctx.Ses.State.Guild(ctx.Mes.GuildID)
@@ -393,7 +393,7 @@ func cfModBlocking(ctx *drc.Context) error {
 	}
 
 	_, err = ctx.Ses.ChannelMessageSendEmbed(ctx.Mes.ChannelID, &discordgo.MessageEmbed{
-		Description: "\u200B" + chls,
+		Description: "\u200B" + resp,
 		Color:       ctx.Ses.State.UserColor(ctx.Mes.Author.ID, ctx.Mes.ChannelID),
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		Footer: &discordgo.MessageEmbedFooter{

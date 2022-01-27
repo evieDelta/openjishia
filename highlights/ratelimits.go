@@ -10,36 +10,36 @@ import (
 const (
 	delaySelf     = time.Minute * 5
 	delayAny      = time.Minute * 1
-	delaySpecific = time.Minute * 10
+	delaySpecific = time.Minute * 8
 )
 
-var hlratelimit = map[string]time.Time{}
-var hlratelimitlock = sync.RWMutex{}
-var hlratelimitclean = rate.NewLimiter(rate.Every(time.Minute*30), 1)
+var ratelimit = map[string]time.Time{}
+var ratelimitLock = sync.RWMutex{}
+var ratelimitClean = rate.NewLimiter(rate.Every(time.Minute*30), 1)
 
-func getrlimkey(userid, guildid, tag string) string {
-	return guildid + ":" + userid + ":" + tag
+func getrlimkey(userID, guildID, tag string) string {
+	return guildID + ":" + userID + ":" + tag
 }
 
 func addLimit(key string, dur time.Duration) {
 	//	fmt.Println("adding ratelimit key ", key, " for ", dur.String())
 
-	cleanratelimit()
+	cleanRateLimit()
 
-	hlratelimitlock.Lock()
-	defer hlratelimitlock.Unlock()
+	ratelimitLock.Lock()
+	defer ratelimitLock.Unlock()
 
-	hlratelimit[key] = time.Now().Add(dur)
+	ratelimit[key] = time.Now().Add(dur)
 
 	//	ls := "> Active\n"
-	//	for i, x := range hlratelimit {
-	//		if hlratelimit[i].After(time.Now()) {
+	//	for i, x := range ratelimit {
+	//		if ratelimit[i].After(time.Now()) {
 	//			ls += i + " | " + x.Sub(time.Now()).Truncate(time.Millisecond).String() + "\n"
 	//		}
 	//	}
 	//	ls += "> Inactive\n"
-	//	for i, x := range hlratelimit {
-	//		if !hlratelimit[i].After(time.Now()) {
+	//	for i, x := range ratelimit {
+	//		if !ratelimit[i].After(time.Now()) {
 	//			ls += i + " | " + x.Sub(time.Now()).Truncate(time.Millisecond).String() + "\n"
 	//		}
 	//	}
@@ -47,10 +47,10 @@ func addLimit(key string, dur time.Duration) {
 }
 
 func isAllow(key string) bool {
-	hlratelimitlock.RLock()
-	defer hlratelimitlock.RUnlock()
+	ratelimitLock.RLock()
+	defer ratelimitLock.RUnlock()
 
-	st := !hlratelimit[key].After(time.Now())
+	st := !ratelimit[key].After(time.Now())
 	//	fmt.Println(key, " | ", st)
 	return st
 }
@@ -60,21 +60,21 @@ func isLimited(key string) bool {
 }
 
 func init() {
-	hlratelimitclean.Allow()
+	ratelimitClean.Allow()
 }
 
-func cleanratelimit() {
-	if !hlratelimitclean.Allow() {
+func cleanRateLimit() {
+	if !ratelimitClean.Allow() {
 		return
 	}
-	hlratelimitlock.Lock()
-	defer hlratelimitlock.Unlock()
+	ratelimitLock.Lock()
+	defer ratelimitLock.Unlock()
 
 	//	wlog.Info.Print("Running ratelimit cache cleaner...")
-	for i, x := range hlratelimit {
+	for i, x := range ratelimit {
 		if x.Before(time.Now()) {
 			//			fmt.Println("removing ", i, x.String(), "behind")
-			delete(hlratelimit, i)
+			delete(ratelimit, i)
 		}
 	}
 }

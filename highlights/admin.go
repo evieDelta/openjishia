@@ -10,8 +10,8 @@ import (
 	"github.com/eviedelta/openjishia/wlog"
 )
 
-// hladmin some commands for highlight admin and debug
-var hladmin = &drc.Command{
+// cAdmin some commands for highlight admin and debug
+var cAdmin = &drc.Command{
 	Name:         "hladmin",
 	Manual:       []string{"some commands for highlight admin and debug"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -36,18 +36,18 @@ func cfHladmin(ctx *drc.Context) error {
 }
 
 func init() {
-	hladmin.Subcommands.Add(ratelimitstatus)
-	hladmin.Subcommands.Add(rateclean)
-	hladmin.Subcommands.Add(forcerateclear)
+	cAdmin.Subcommands.Add(debugRatelimitstatus)
+	cAdmin.Subcommands.Add(debugRateclean)
+	cAdmin.Subcommands.Add(debugForcerateclear)
 
-	hladmin.Subcommands.Add(dellogtest)
+	cAdmin.Subcommands.Add(debugDellogtest)
 
-	hladmin.Subcommands.Add(debugView)
-	hladmin.Subcommands.Add(debugRemove)
+	cAdmin.Subcommands.Add(debugView)
+	cAdmin.Subcommands.Add(debugRemove)
 }
 
-// ratelimitstatus gets the current status of the ratelimits
-var ratelimitstatus = &drc.Command{
+// debugRatelimitstatus gets the current status of the ratelimits
+var debugRatelimitstatus = &drc.Command{
 	Name:         "ratelimitstatus",
 	Manual:       []string{"gets the current status of the ratelimits"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -63,17 +63,17 @@ var ratelimitstatus = &drc.Command{
 }
 
 func cfRatelimitstatus(ctx *drc.Context) error {
-	hlratelimitlock.RLock()
-	defer hlratelimitlock.RUnlock()
+	ratelimitLock.RLock()
+	defer ratelimitLock.RUnlock()
 
 	ls := "> Active\n"
-	for i, x := range hlratelimit {
+	for i, x := range ratelimit {
 		if isLimited(i) {
 			ls += i + " | " + time.Until(x).Truncate(time.Millisecond).String() + "\n"
 		}
 	}
 	ls += "> Inactive\n"
-	for i, x := range hlratelimit {
+	for i, x := range ratelimit {
 		if !isLimited(i) {
 			ls += i + " | " + time.Until(x).Truncate(time.Millisecond).String() + "\n"
 		}
@@ -82,8 +82,8 @@ func cfRatelimitstatus(ctx *drc.Context) error {
 	return ctx.DumpReply("highlight ratelimit status", ls)
 }
 
-// rateclean force runs the routine to clean the highlight ratelimit cache
-var rateclean = &drc.Command{
+// debugRateclean force runs the routine to clean the highlight ratelimit cache
+var debugRateclean = &drc.Command{
 	Name:         "rateclean",
 	Manual:       []string{"force runs the routine to clean the highlight ratelimit cache"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -101,19 +101,19 @@ var rateclean = &drc.Command{
 func cfRateclean(ctx *drc.Context) error {
 	wlog.Info.Print("Running ratelimit cache cleaner...")
 
-	hlratelimitlock.Lock()
-	defer hlratelimitlock.Unlock()
+	ratelimitLock.Lock()
+	defer ratelimitLock.Unlock()
 
-	for i, x := range hlratelimit {
+	for i, x := range ratelimit {
 		if x.Before(time.Now()) {
-			delete(hlratelimit, i)
+			delete(ratelimit, i)
 		}
 	}
 	return ctx.Reply("done")
 }
 
-// forcerateclear forcefully cleans the ratelimit cache
-var forcerateclear = &drc.Command{
+// debugForcerateclear forcefully cleans the ratelimit cache
+var debugForcerateclear = &drc.Command{
 	Name:         "forcerateclear",
 	Manual:       []string{"forcefully clears the entire ratelimit cache"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -132,11 +132,11 @@ func cfForcerateclear(ctx *drc.Context) error {
 	wlog.Info.Print("Running forced ratelimit cache cleaner...")
 	time.Sleep(time.Second * 5)
 
-	hlratelimitlock.Lock()
-	defer hlratelimitlock.Unlock()
+	ratelimitLock.Lock()
+	defer ratelimitLock.Unlock()
 
-	for i := range hlratelimit {
-		delete(hlratelimit, i)
+	for i := range ratelimit {
+		delete(ratelimit, i)
 	}
 	return ctx.Reply("done")
 }

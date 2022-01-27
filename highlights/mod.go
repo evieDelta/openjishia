@@ -11,7 +11,7 @@ import (
 	"github.com/eviedelta/openjishia/module"
 )
 
-var Config = struct {
+var config = struct {
 	Debug bool
 }{}
 
@@ -19,20 +19,20 @@ var Config = struct {
 var Module = &module.Module{
 	Name: "highlights",
 
-	Config: &Config,
+	Config: &config,
 
 	DgoHandlers: []interface{}{
-		guildCreate,
+		onGuildCreate,
 		messageCreate,
 		onMemberCreate,
 		onMemberLeave,
 	},
 
 	Commands: []*drc.Command{
-		hlconf,
-		hladmin,
-		hlmod,
-		cmdhighlight,
+		cConf,
+		cAdmin,
+		cMod,
+		cHighlight,
 		{Name: "hl", AliasText: []string{"highlight"}},
 	},
 
@@ -47,7 +47,7 @@ var Module = &module.Module{
 	},
 }
 
-func guildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
+func onGuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	_, err := db.s.Exec("insert into highlights.guilds (guild_id) values ($1) on conflict (guild_id) do nothing", g.ID)
 	if err != nil {
 		fmt.Printf("Error adding guild %v to highlight config: %v\n", g.ID, err)

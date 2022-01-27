@@ -9,8 +9,8 @@ import (
 	"github.com/eviedelta/openjishia/nschedule"
 )
 
-// dellogtest help
-var dellogtest = &drc.Command{
+// debugDellogtest help
+var debugDellogtest = &drc.Command{
 	Name:   "dellogtest",
 	Manual: []string{"help"},
 	Permissions: drc.Permissions{
@@ -25,7 +25,7 @@ var dellogtest = &drc.Command{
 }
 
 func cfDellogtest(ctx *drc.Context) error {
-	m, err := ctx.XReply("uwu to delete in 1 minute")
+	m, err := ctx.XReply("to delete in 1 minute")
 	if err != nil {
 		return err
 	}

@@ -18,10 +18,12 @@ func init() {
 
 var db = &Database{}
 
+// Database .
 type Database struct {
 	s *dbr.Session
 }
 
+// Highlight .
 type Highlight struct {
 	UserID        string
 	Enabled       bool

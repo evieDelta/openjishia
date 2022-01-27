@@ -12,8 +12,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// cmdhighlight some commands for highlighting words and stuff
-var cmdhighlight = &drc.Command{
+// cHighlight some commands for highlighting words and stuff
+var cHighlight = &drc.Command{
 	Name:         "highlight",
 	Manual:       []string{"some commands for highlighting words and stuff"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -57,45 +57,45 @@ func cfHighlight(ctx *drc.Context) error {
 }
 
 func init() {
-	cmdhighlight.Subcommands.Add(hladd)
-	cmdhighlight.Subcommands.AddAliasString("a", "highlight", "add")
-	cmdhighlight.Subcommands.AddAliasString("+", "highlight", "add")
+	cHighlight.Subcommands.Add(hlAdd)
+	cHighlight.Subcommands.AddAliasString("a", "highlight", "add")
+	cHighlight.Subcommands.AddAliasString("+", "highlight", "add")
 
-	cmdhighlight.Subcommands.Add(hlremove)
-	cmdhighlight.Subcommands.AddAliasString("rm", "highlight", "remove")
-	cmdhighlight.Subcommands.AddAliasString("rem", "highlight", "remove")
-	cmdhighlight.Subcommands.AddAliasString("d", "highlight", "remove")
-	cmdhighlight.Subcommands.AddAliasString("del", "highlight", "remove")
-	cmdhighlight.Subcommands.AddAliasString("delete", "highlight", "remove")
-	cmdhighlight.Subcommands.AddAliasString("-", "highlight", "remove")
+	cHighlight.Subcommands.Add(hlRemove)
+	cHighlight.Subcommands.AddAliasString("rm", "highlight", "remove")
+	cHighlight.Subcommands.AddAliasString("rem", "highlight", "remove")
+	cHighlight.Subcommands.AddAliasString("d", "highlight", "remove")
+	cHighlight.Subcommands.AddAliasString("del", "highlight", "remove")
+	cHighlight.Subcommands.AddAliasString("delete", "highlight", "remove")
+	cHighlight.Subcommands.AddAliasString("-", "highlight", "remove")
 
-	cmdhighlight.Subcommands.Add(cClear)
-	cmdhighlight.Subcommands.AddAliasString("c", "highlight", "clear")
-	cmdhighlight.Subcommands.AddAliasString("cl", "highlight", "clear")
-	cmdhighlight.Subcommands.AddAliasString("dall", "highlight", "clear")
-	cmdhighlight.Subcommands.AddAliasString("rall", "highlight", "clear")
+	cHighlight.Subcommands.Add(hlClear)
+	cHighlight.Subcommands.AddAliasString("c", "highlight", "clear")
+	cHighlight.Subcommands.AddAliasString("cl", "highlight", "clear")
+	cHighlight.Subcommands.AddAliasString("dall", "highlight", "clear")
+	cHighlight.Subcommands.AddAliasString("rall", "highlight", "clear")
 
-	cmdhighlight.Subcommands.Add(hlList)
-	cmdhighlight.Subcommands.AddAliasString("l", "highlight", "list")
-	cmdhighlight.Subcommands.AddAliasString("ls", "highlight", "list")
-	cmdhighlight.Subcommands.AddAliasString("=", "highlight", "list")
+	cHighlight.Subcommands.Add(hlList)
+	cHighlight.Subcommands.AddAliasString("l", "highlight", "list")
+	cHighlight.Subcommands.AddAliasString("ls", "highlight", "list")
+	cHighlight.Subcommands.AddAliasString("=", "highlight", "list")
 
-	cmdhighlight.Subcommands.Add(hlBlock)
-	cmdhighlight.Subcommands.AddAliasString("blk", "highlight", "block")
-	cmdhighlight.Subcommands.AddAliasString("b+", "highlight", "block")
-	cmdhighlight.Subcommands.Add(hlUnblock)
-	cmdhighlight.Subcommands.AddAliasString("ublk", "highlight", "unblock")
-	cmdhighlight.Subcommands.AddAliasString("unblk", "highlight", "unblock")
-	cmdhighlight.Subcommands.AddAliasString("b-", "highlight", "unblock")
-	cmdhighlight.Subcommands.Add(hlBlocking)
-	cmdhighlight.Subcommands.AddAliasString("bls", "highlight", "blocking")
-	cmdhighlight.Subcommands.AddAliasString("blocklist", "highlight", "blocking")
-	cmdhighlight.Subcommands.AddAliasString("b=", "highlight", "blocking")
-	cmdhighlight.Subcommands.Add(hlTest)
+	cHighlight.Subcommands.Add(hlBlock)
+	cHighlight.Subcommands.AddAliasString("blk", "highlight", "block")
+	cHighlight.Subcommands.AddAliasString("b+", "highlight", "block")
+	cHighlight.Subcommands.Add(hlUnblock)
+	cHighlight.Subcommands.AddAliasString("ublk", "highlight", "unblock")
+	cHighlight.Subcommands.AddAliasString("unblk", "highlight", "unblock")
+	cHighlight.Subcommands.AddAliasString("b-", "highlight", "unblock")
+	cHighlight.Subcommands.Add(hlBlocking)
+	cHighlight.Subcommands.AddAliasString("bls", "highlight", "blocking")
+	cHighlight.Subcommands.AddAliasString("blocklist", "highlight", "blocking")
+	cHighlight.Subcommands.AddAliasString("b=", "highlight", "blocking")
+	cHighlight.Subcommands.Add(hlTest)
 }
 
-// add adds a new word to highlight
-var hladd = &drc.Command{
+// hlAdd adds a new word to highlight
+var hlAdd = &drc.Command{
 	Name:         "add",
 	Manual:       []string{"adds a new word to highlight"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -108,10 +108,10 @@ var hladd = &drc.Command{
 		Listable:    true,
 		MinimumArgs: 1,
 	},
-	Exec: cfAdd,
+	Exec: cfHlAdd,
 }
 
-func cfAdd(ctx *drc.Context) error {
+func cfHlAdd(ctx *drc.Context) error {
 	if !guildIsEnabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
 	}
@@ -146,7 +146,7 @@ func cfAdd(ctx *drc.Context) error {
 			Name:    ctx.Mes.Author.Username + "'s Highlights",
 			IconURL: ctx.Mes.Author.AvatarURL("128"),
 		},
-		Description: "Added ``" + tem + "`` to your highlights,",
+		Description: "Added ``" + tem + "`` to your highlights",
 		Color:       ctx.Ses.State.UserColor(ctx.Mes.Author.ID, ctx.Mes.ChannelID),
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		//Footer: &discordgo.MessageEmbedFooter{
@@ -157,8 +157,8 @@ func cfAdd(ctx *drc.Context) error {
 	return err
 }
 
-// remove stop highlighting a word
-var hlremove = &drc.Command{
+// hlRemove stops highlighting a word
+var hlRemove = &drc.Command{
 	Name:         "remove",
 	Manual:       []string{"stop highlighting a word"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -174,10 +174,10 @@ var hlremove = &drc.Command{
 			"index": false,
 		},
 	},
-	Exec: cfRemove,
+	Exec: cfHlRemove,
 }
 
-func cfRemove(ctx *drc.Context) error {
+func cfHlRemove(ctx *drc.Context) error {
 	tem := strings.Join(ctx.RawArgs, " ")
 
 	if ctx.BoolFlags["index"] {
@@ -208,7 +208,7 @@ func cfRemove(ctx *drc.Context) error {
 		//			Name:    ctx.Mes.Author.Username + "'s Highlights",
 		//			IconURL: ctx.Mes.Author.AvatarURL("128"),
 		//		},
-		Description: "Removed ``" + tem + "`` from your highlights,",
+		Description: "Removed ``" + tem + "`` from your highlights",
 		Color:       ctx.Ses.State.UserColor(ctx.Mes.Author.ID, ctx.Mes.ChannelID),
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		Footer: &discordgo.MessageEmbedFooter{
@@ -219,8 +219,8 @@ func cfRemove(ctx *drc.Context) error {
 	return err
 }
 
-// Clear clears all highlights
-var cClear = &drc.Command{
+// hlClear all highlights
+var hlClear = &drc.Command{
 	Name:         "clear",
 	Manual:       []string{"clears all highlights"},
 	CommandPerms: discordgo.PermissionSendMessages,
@@ -232,10 +232,10 @@ var cClear = &drc.Command{
 		Listable:    true,
 		MinimumArgs: 0,
 	},
-	Exec: cfClear,
+	Exec: cfHlClear,
 }
 
-func cfClear(ctx *drc.Context) error {
+func cfHlClear(ctx *drc.Context) error {
 	hls, err := userListHighlights(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
 		return err
@@ -265,7 +265,7 @@ func cfClear(ctx *drc.Context) error {
 	return err
 }
 
-// List lists your highlights
+// hlList your highlights
 var hlList = &drc.Command{
 	Name:         "list",
 	Manual:       []string{"lists your highlights"},
@@ -279,10 +279,10 @@ var hlList = &drc.Command{
 		Listable:    true,
 		MinimumArgs: 0,
 	},
-	Exec: cfList,
+	Exec: cfHlList,
 }
 
-func cfList(ctx *drc.Context) error {
+func cfHlList(ctx *drc.Context) error {
 	ok := guildIsEnabled(ctx.Mes.GuildID)
 	ls := ""
 	list, err := userListHighlights(ctx.Mes.Author.ID, ctx.Mes.GuildID)
@@ -313,7 +313,7 @@ func cfList(ctx *drc.Context) error {
 	return err
 }
 
-// block block a channel or user from showing up in your highlights
+// hlBlock a channel or user from showing up in your highlights
 var hlBlock = &drc.Command{
 	Name:         "block",
 	Manual:       []string{"block a channel or user from showing up in your highlights"},
@@ -331,10 +331,10 @@ var hlBlock = &drc.Command{
 			"channel": false,
 		},
 	},
-	Exec: cfBlock,
+	Exec: cfHlBlock,
 }
 
-func cfBlock(ctx *drc.Context) error {
+func cfHlBlock(ctx *drc.Context) error {
 	if !guildIsEnabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
 	}
@@ -431,7 +431,7 @@ func cfBlock(ctx *drc.Context) error {
 	return err
 }
 
-// unblock unblock a channel or user from showing up in your highlights
+// hlUnblock a channel or user from showing up in your highlights
 var hlUnblock = &drc.Command{
 	Name:         "unblock",
 	Manual:       []string{"unblock a channel or user from showing up in your highlights"},
@@ -450,10 +450,10 @@ var hlUnblock = &drc.Command{
 			"index":   false,
 		},
 	},
-	Exec: cfUnblock,
+	Exec: cfHlUnblock,
 }
 
-func cfUnblock(ctx *drc.Context) error {
+func cfHlUnblock(ctx *drc.Context) error {
 	const (
 		channel, user = 1, 2
 	)
@@ -554,7 +554,7 @@ func cfUnblock(ctx *drc.Context) error {
 	return err
 }
 
-// blocking lists who you are blocking
+// hlBlocking lists who you are blocking
 var hlBlocking = &drc.Command{
 	Name:         "blocking",
 	Manual:       []string{"lists who you are blocking"},
@@ -568,10 +568,10 @@ var hlBlocking = &drc.Command{
 		Listable:    true,
 		MinimumArgs: 0,
 	},
-	Exec: cfBlocking,
+	Exec: cfHlBlocking,
 }
 
-func cfBlocking(ctx *drc.Context) error {
+func cfHlBlocking(ctx *drc.Context) error {
 	ublls, err := userBlockedMembers(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
 		return err
@@ -612,7 +612,7 @@ func cfBlocking(ctx *drc.Context) error {
 	return err
 }
 
-// test tests if a string matches any of your highlights
+// hlTest if a string matches any of your highlights
 var hlTest = &drc.Command{
 	Name:         "test",
 	Manual:       []string{"tests if a string matches any of your highlights"},
@@ -626,15 +626,10 @@ var hlTest = &drc.Command{
 		Listable:    true,
 		MinimumArgs: 1,
 	},
-	Exec: cfTest,
+	Exec: cfHlTest,
 }
 
-var truefalseemote = map[bool]string{
-	true:  "✅",
-	false: "❌",
-}
-
-func cfTest(ctx *drc.Context) error {
+func cfHlTest(ctx *drc.Context) error {
 	if !guildIsEnabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
 	}
