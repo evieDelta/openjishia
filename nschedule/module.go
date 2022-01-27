@@ -26,6 +26,7 @@ var Scheduler = insched.New(db)
 var Config = &localConfig{}
 
 type localConfig struct {
+	Debug bool
 }
 
 // Module contains the module, i mean what else would it contain
@@ -44,6 +45,7 @@ var Module = &module.Module{
 
 	InitFunc: func(mod *module.Module) error {
 		Scheduler.Log = new(logger)
+		insched.Debug = Config.Debug
 
 		return nil
 	},

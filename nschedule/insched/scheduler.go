@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/eviedelta/openjishia/wlog"
 	"github.com/pkg/errors"
 )
 
@@ -184,6 +185,8 @@ func (a *_action) queuePrecise(que []Entry, wentWrong chan _failure, halt *bool,
 	}
 }
 
+var Debug bool
+
 // entry executers
 func (a *_action) doEntry(x Entry, wentWrong chan _failure, wg *sync.WaitGroup) (no bool) {
 	// oops protection
@@ -229,6 +232,10 @@ func (a *_action) doEntry(x Entry, wentWrong chan _failure, wg *sync.WaitGroup) 
 	// for the waitgroup given by the scan function, so it won't just quit on us
 	wg.Add(1)
 	defer wg.Done()
+
+	if Debug {
+		wlog.Spam.Printf("Action: %v, ID: %v, Defer? %v\n`%v`\n\n```\n%v\n```", x.Action, x.ID, x.DeferCount, x.Time.Format("2006-01-02 15:04:05"), x.Details)
+	}
 
 	// call the handler with the entry data
 	def, err := a.han.Call(x)
