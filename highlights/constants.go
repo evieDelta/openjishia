@@ -8,7 +8,7 @@ import (
 const messageKeepTime = time.Hour * 24
 const previewSize = 150
 
-const maxHighlights = 40
+const maxHighlights = 30
 const maxHighlightLength = 128
 
 var maxHighlightsString = strconv.Itoa(maxHighlights)
