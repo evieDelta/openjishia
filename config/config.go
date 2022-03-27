@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/burntsushi/toml"
+	"github.com/pelletier/go-toml"
 )
 
 // Config contains the core configuration for the bot, i mean what else would it contain
@@ -71,8 +71,13 @@ func AConf(loc string) (Config, error) {
 
 // Load loads a toml based config file
 func Load(loc string) (cfg Config, err error) {
-	_, err = toml.DecodeFile(loc, &cfg)
-	return
+	dat, err := os.ReadFile(loc)
+	if err != nil {
+		return cfg, err
+	}
+
+	err = toml.Unmarshal(dat, &cfg)
+	return cfg, err
 }
 
 // CheckExist is a lazy function to determine if a file exists or not
@@ -109,7 +114,13 @@ func AnyConf(loc, filename string, cfg interface{}) error {
 		if !CheckExist(f + filename) {
 			continue
 		}
-		_, err := toml.DecodeFile(f+filename, cfg)
+
+		dat, err := os.ReadFile(f + filename)
+		if err != nil {
+			return err
+		}
+
+		err = toml.Unmarshal(dat, &cfg)
 		return err
 	}
 	return fmt.Errorf("%w, locations checked for `%v`: %v", os.ErrNotExist, filename, search)

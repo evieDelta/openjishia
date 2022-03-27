@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"codeberg.org/eviedelta/drc"
-	"github.com/burntsushi/toml"
 	"github.com/bwmarrin/discordgo"
 	"github.com/eviedelta/openjishia/module"
 	"github.com/eviedelta/openjishia/wlog"
 	"github.com/gocraft/dbr/v2"
+	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 
 	// Import postgresql for database stuff

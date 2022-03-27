@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/eviedelta/openjishia/wlog"
@@ -158,6 +159,11 @@ func sendHighlight(s *discordgo.Session, m *discordgo.MessageCreate, targetuser,
 
 	//	fmt.Println(len(fields), fields)
 
+	t, err := discordgo.SnowflakeTimestamp(m.ID)
+	if err != nil {
+		return errors.Wrap(err, "@discordgo.SnowflakeTimestamp")
+	}
+
 	g, err := s.State.Guild(m.GuildID)
 	if err != nil {
 		return errors.Wrap(err, "@s.State.Guild (Get guild)")
@@ -174,7 +180,7 @@ func sendHighlight(s *discordgo.Session, m *discordgo.MessageCreate, targetuser,
 			Fields:      fields,
 			Color:       s.State.UserColor(m.Author.ID, m.ChannelID),
 
-			Timestamp: string(m.Timestamp),
+			Timestamp: t.Format(time.RFC3339),
 
 			Footer: &discordgo.MessageEmbedFooter{
 				Text: func() string {
