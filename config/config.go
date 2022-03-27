@@ -120,7 +120,7 @@ func AnyConf(loc, filename string, cfg interface{}) error {
 			return err
 		}
 
-		err = toml.Unmarshal(dat, &cfg)
+		err = toml.Unmarshal(dat, cfg)
 		return err
 	}
 	return fmt.Errorf("%w, locations checked for `%v`: %v", os.ErrNotExist, filename, search)
