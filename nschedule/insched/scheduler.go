@@ -237,9 +237,9 @@ func (a *action) doEntry(entry Entry, wentWrong chan failure, wg *sync.WaitGroup
 	wg.Add(1)
 	defer wg.Done()
 
-	if Debug {
-		wlog.Spam.Printf("Action: %v, ID: %v, Defer? %v\n`%v`\n\n```\n%v\n```", entry.Action, entry.ID, entry.DeferCount, entry.Time.Format("2006-01-02 15:04:05"), entry.Details)
-	}
+	//	if Debug {
+	//		wlog.Spam.Printf("Action: %v, ID: %v, Defer? %v\n`%v`\n\n```\n%v\n```", entry.Action, entry.ID, entry.DeferCount, entry.Time.Format("2006-01-02 15:04:05"), entry.Details)
+	//	}
 
 	// call the handler with the entry data
 	def, err := a.han.Call(entry)
