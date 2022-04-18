@@ -109,10 +109,10 @@ var cMod = &drc.Command{
 	CommandPerms: discordgo.PermissionSendMessages,
 	Permissions: drc.Permissions{
 		BotAdmin: trit.Unset,
-		Discord:  discordgo.PermissionManageNicknames,
+		Discord:  discordgo.PermissionManageServer,
 	},
 	Config: drc.CfgCommand{
-		Listable:    false,
+		Listable:    true,
 		MinimumArgs: 0,
 	},
 	Exec: cfHlmod,
@@ -143,7 +143,7 @@ var modView = &drc.Command{
 		Discord:  0,
 	},
 	Config: drc.CfgCommand{
-		Listable:    false,
+		Listable:    true,
 		MinimumArgs: 1,
 	},
 	Exec: cfView,
@@ -185,7 +185,7 @@ var modRemove = &drc.Command{
 		Discord:  0,
 	},
 	Config: drc.CfgCommand{
-		Listable:    false,
+		Listable:    true,
 		MinimumArgs: 2,
 	},
 	Exec: cfModRemove,

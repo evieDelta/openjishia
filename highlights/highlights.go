@@ -45,6 +45,11 @@ func highlighter(s *discordgo.Session, m *discordgo.MessageCreate) (err error) {
 		return err
 	}
 
+	chanid := channel.ID
+	if channel.IsThread() {
+		chanid = channel.ParentID
+	}
+
 	blocks, err := guildBlockedChannels(m.GuildID)
 	if err != nil {
 		return err
@@ -70,12 +75,20 @@ mainloop:
 			//fmt.Println(m.ID, " | user ", hls.UserID, " is currently on cooldown")
 			continue
 		}
-		if p, err := s.State.UserChannelPermissions(hls.UserID, m.ChannelID); err != nil {
+
+		addedtothread := false
+		for _, x := range channel.Members {
+			if hls.UserID == x.UserID {
+				addedtothread = true
+			}
+		}
+
+		if p, err := s.State.UserChannelPermissions(hls.UserID, chanid); err != nil {
 			userSetEnabled(hls.UserID, m.GuildID, false)
 			wlog.Err.Print(errors.Wrapf(err, "@s.State.UserChannelPermissions (Check Permission for user %v)", hls.UserID))
 
 			continue
-		} else if p&discordgo.PermissionViewChannel == 0 {
+		} else if p&discordgo.PermissionViewChannel == 0 && !addedtothread {
 			//fmt.Println(m.ID, " | user ", hls.UserID, " does not have permissions to view channel")
 			continue
 		}
@@ -158,6 +171,7 @@ func sendHighlight(s *discordgo.Session, m *discordgo.MessageCreate, targetuser,
 	}
 
 	//	fmt.Println(len(fields), fields)
+	fmt.Println(targetuser, term)
 
 	t, err := discordgo.SnowflakeTimestamp(m.ID)
 	if err != nil {
