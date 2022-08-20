@@ -34,6 +34,12 @@ var cHighlight = &drc.Command{
 
 func cfHighlight(ctx *drc.Context) error {
 	ok := guildIsEnabled(ctx.Mes.GuildID)
+
+	if !userGetEnabled(ctx.Mes.Author.ID, ctx.Mes.GuildID) {
+		ctx.Ses.MessageReactionAdd(ctx.Mes.ChannelID, ctx.Mes.ID, "⚙️")
+		userSetEnabled(ctx.Mes.Author.ID, ctx.Mes.GuildID, true)
+	}
+
 	if ctx.BoolFlags["old"] {
 		list := ctx.Com.Subcommands.ListRecursiveStructured(false, 1)
 		ls := "SubCommands:\n"
@@ -114,6 +120,11 @@ var hlAdd = &drc.Command{
 func cfHlAdd(ctx *drc.Context) error {
 	if !guildIsEnabled(ctx.Mes.GuildID) {
 		return ctx.Reply(notEnabledMessage)
+	}
+
+	if !userGetEnabled(ctx.Mes.Author.ID, ctx.Mes.GuildID) {
+		ctx.Ses.MessageReactionAdd(ctx.Mes.ChannelID, ctx.Mes.ID, "⚙️")
+		userSetEnabled(ctx.Mes.Author.ID, ctx.Mes.GuildID, true)
 	}
 
 	tem := strings.Join(ctx.RawArgs, " ")

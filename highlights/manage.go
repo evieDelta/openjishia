@@ -1,6 +1,8 @@
 package highlights
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/eviedelta/openjishia/wlog"
@@ -43,15 +45,26 @@ func guildUnblockChannel(guildID string, target string) error {
 func guildBlockedChannels(guildID string) (blocks []string, err error) {
 	err = db.s.QueryRow("insert into highlights.guilds (guild_id) values ($1) on conflict (guild_id) do update set guild_id = $1 returning blocked_channels", guildID).Scan(pq.Array(&blocks))
 	if err != nil {
-		wlog.Err.Printf("Getting highlight blocks for/g:%v: %v", guildID, err)
+		wlog.Err.Printf("Getting highlight blocks for /g:%v: %v", guildID, err)
 	}
 	return blocks, err
+}
+
+func userGetEnabled(userID, guildID string) (b bool) {
+	err := db.s.QueryRow("select enabled from highlights.highlights where user_id = $1 and guild_id = $2", userID, guildID).Scan(&b)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false
+		}
+		wlog.Err.Printf("Getting highlight enabled for u:%v/g:%v: %v", userID, guildID, err)
+	}
+	return b
 }
 
 func userSetEnabled(userID, guildID string, toggleTo bool) {
 	_, err := db.s.Exec("update highlights.highlights set enabled = $3 where user_id = $1 and guild_id = $2", userID, guildID, toggleTo)
 	if err != nil {
-		fmt.Printf("Error toggling highlights for u:%v/g:%v: %v\n", userID, guildID, err)
+		wlog.Err.Printf("Error toggling highlights for u:%v/g:%v: %v\n", userID, guildID, err)
 	}
 }
 
