@@ -295,6 +295,12 @@ var hlList = &drc.Command{
 
 func cfHlList(ctx *drc.Context) error {
 	ok := guildIsEnabled(ctx.Mes.GuildID)
+
+	if !userGetEnabled(ctx.Mes.Author.ID, ctx.Mes.GuildID) {
+		ctx.Ses.MessageReactionAdd(ctx.Mes.ChannelID, ctx.Mes.ID, "⚙️")
+		userSetEnabled(ctx.Mes.Author.ID, ctx.Mes.GuildID, true)
+	}
+
 	ls := ""
 	list, err := userListHighlights(ctx.Mes.Author.ID, ctx.Mes.GuildID)
 	if err != nil {
